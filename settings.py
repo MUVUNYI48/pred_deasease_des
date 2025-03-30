@@ -1,0 +1,3 @@
+# ...existing code...
+
+LOGIN_REDIRECT_URL = '/'  # Redirect to the homepage or any other desired URL

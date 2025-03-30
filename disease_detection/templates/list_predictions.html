@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Prediction Results</title>
+</head>
+<body>
+    <h1>All Predictions</h1>
+    <table border="1">
+        <thead>
+            <tr>
+                <th>Image</th>
+                <th>Class Name</th>
+                <th>Confidence</th>
+                <th>Created At</th>
+                <th>Actions</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for prediction in predictions %}
+            <tr>
+                <td><img src="{{ prediction.image.url }}" alt="Image" style="max-width: 100px;"></td>
+                <td>{{ prediction.class_name }}</td>
+                <td>{{ prediction.confidence|floatformat:2 }}</td>
+                <td>{{ prediction.created_at }}</td>
+                <td>
+                    <a href="{% url 'delete_prediction' prediction.pk %}">Delete</a>
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</body>
+</html>

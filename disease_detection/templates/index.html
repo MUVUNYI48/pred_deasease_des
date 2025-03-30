@@ -1,0 +1,24 @@
+<form id="upload-form" enctype="multipart/form-data">
+    <input type="file" name="image" required>
+    <button type="submit">Upload</button>
+</form>
+
+<div id="result"></div>
+
+<script>
+
+    document.getElementById('upload-form').onsubmit = async function(e) {
+        e.preventDefault();
+
+        let formData = new FormData(this);
+        let response = await fetch('/upload/', {
+            method: 'POST',
+            body: formData
+        });
+
+        let data = await response.json();
+
+        document.getElementById('result').innerText = "Predicted Disease: " + data.prediction;
+    };
+    
+</script>

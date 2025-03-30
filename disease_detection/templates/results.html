@@ -1,0 +1,15 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Prediction Results</title>
+</head>
+<body>
+    <h1>Prediction Results</h1>
+    <img src="{{ image_url }}" alt="Uploaded Image" style="max-width: 300px;">
+    <p>Predicted Class: {{ class_name }}</p>
+    <p>Confidence: {{ confidence|floatformat:2 }}</p>
+    <a href="{% url 'upload_image' %}">Upload Another Image</a>
+</body>
+</html>
