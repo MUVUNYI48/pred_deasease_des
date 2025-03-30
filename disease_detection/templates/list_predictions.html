@@ -4,32 +4,35 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Prediction Results</title>
+    <script src="https://cdn.tailwindcss.com"></script>
 </head>
-<body>
-    <h1>All Predictions</h1>
-    <table border="1">
-        <thead>
-            <tr>
-                <th>Image</th>
-                <th>Class Name</th>
-                <th>Confidence</th>
-                <th>Created At</th>
-                <th>Actions</th>
-            </tr>
-        </thead>
-        <tbody>
-            {% for prediction in predictions %}
-            <tr>
-                <td><img src="{{ prediction.image.url }}" alt="Image" style="max-width: 100px;"></td>
-                <td>{{ prediction.class_name }}</td>
-                <td>{{ prediction.confidence|floatformat:2 }}</td>
-                <td>{{ prediction.created_at }}</td>
-                <td>
-                    <a href="{% url 'delete_prediction' prediction.pk %}">Delete</a>
-                </td>
-            </tr>
-            {% endfor %}
-        </tbody>
-    </table>
+<body class="bg-gray-100 flex items-center justify-center min-h-screen">
+    <div class="bg-white p-8 rounded shadow-md w-full max-w-4xl">
+        <h1 class="text-2xl font-bold mb-4 text-center">All Predictions</h1>
+        <table class="table-auto w-full border-collapse border border-gray-300">
+            <thead>
+                <tr class="bg-gray-200">
+                    <th class="border border-gray-300 px-4 py-2">Image</th>
+                    <th class="border border-gray-300 px-4 py-2">Class Name</th>
+                    <th class="border border-gray-300 px-4 py-2">Confidence</th>
+                    <th class="border border-gray-300 px-4 py-2">Created At</th>
+                    <th class="border border-gray-300 px-4 py-2">Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for prediction in predictions %}
+                <tr class="text-center">
+                    <td class="border border-gray-300 px-4 py-2"><img src="{{ prediction.image.url }}" alt="Image" class="max-w-xs mx-auto"></td>
+                    <td class="border border-gray-300 px-4 py-2">{{ prediction.class_name }}</td>
+                    <td class="border border-gray-300 px-4 py-2">{{ prediction.confidence|floatformat:2 }}</td>
+                    <td class="border border-gray-300 px-4 py-2">{{ prediction.created_at }}</td>
+                    <td class="border border-gray-300 px-4 py-2">
+                        <a href="{% url 'delete_prediction' prediction.pk %}" class="text-red-500 hover:underline">Delete</a>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
 </body>
 </html>

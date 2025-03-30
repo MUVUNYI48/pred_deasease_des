@@ -6,8 +6,10 @@ uploaded_images/
 predicted_images/
 
 # Ignore model files
-*.keras
-*.h5
+# *.keras
+# *.h5
+
+
 
 # Ignore Python cache files
 __pycache__/

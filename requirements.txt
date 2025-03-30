@@ -1,0 +1,5 @@
+Django==4.2  # Replace with your Django version
+djangorestframework==3.14.0  # For REST API functionality
+tensorflow==2.10.0  # Replace with your TensorFlow version
+numpy==1.23.5  # Replace with your NumPy version
+Pillow==9.3.0  # For image processing
