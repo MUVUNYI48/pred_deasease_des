@@ -6,4 +6,6 @@ numpy==1.23.5  # Replace with your NumPy version
 # pymongo
 python-dotenv==1.0.0
 python-decouple==3.8
+psycopg2-binary==2.9.10
+
 
