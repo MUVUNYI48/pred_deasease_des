@@ -6,17 +6,30 @@
     <title>Prediction Results</title>
     <script src="https://cdn.tailwindcss.com"></script>
 </head>
-<body class="bg-gray-100 flex items-center justify-center min-h-screen">
+<body class="bg-gray-100 flex block items-center justify-center min-h-screen">
     <div class="bg-white p-8 rounded shadow-md w-full max-w-lg">
         <h1 class="text-2xl font-bold mb-4 text-center">Prediction Results</h1>
         <div class="text-center">
             <img src="{{ image_url }}" alt="Uploaded Image" class="mx-auto mb-4 max-w-xs rounded shadow">
-            <p class="text-lg font-semibold">Predicted Class: <span class="text-blue-600">{{ class_name }}</span></p>
-            <p class="text-lg font-semibold">Confidence: <span class="text-green-600">{{ confidence|floatformat:2 }}</span></p>
+            <p class="text-lg font-semibold">
+                {% if class_name == "Unrelated Image" %}
+                    The uploaded image is not recognized as a leaf disease. Please upload a valid image.
+                {% else %}
+                    Predicted Class: <span class="text-blue-600">{{ class_name }}</span>
+                    <br>Confidence: <span class="text-green-600">{{ confidence|floatformat:2 }}</span>
+                {% endif %}
+            </p>
         </div>
         <div class="mt-6 text-center">
             <a href="{% url 'upload_image' %}" class="bg-blue-500 text-white py-2 px-4 rounded hover:bg-blue-600">Upload Another Image</a>
         </div>
+        <div class="mt-4 text-center block">
+            <a href="{% url 'list_predictions' %}" class="bg-green-500 text-white py-2 px-4 rounded hover:bg-green-600">View All Predictions</a>
+        </div>
     </div>
+        
+   
+
+    <button></button>
 </body>
 </html>

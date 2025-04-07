@@ -13,4 +13,8 @@ from django.core.wsgi import get_wsgi_application
 
 os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'tomato_ai.settings')
 
+# This line is causing the error - it should be removed:
+# os.environ.setdefault('wsgi.version', (1, 0))
+# Environment variables must be strings, not tuples
+
 application = get_wsgi_application()

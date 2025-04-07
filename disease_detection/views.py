@@ -1,84 +1,100 @@
-from django.shortcuts import render
-from django.http import HttpResponse
-from django.core.files.storage import FileSystemStorage
-from .ml_model.predict import predict_disease
-from rest_framework.response import Response
-from rest_framework.decorators import api_view
-from .models import UploadedImage
-from django.core.files.storage import default_storage
-# from .ml_model.predict import predict_disease
-from django.shortcuts import render, redirect
-from django.contrib.auth.forms import UserCreationForm
-from django.contrib import messages
-from django.contrib.auth.decorators import login_required
-from .models import PredictionResult
 from django.shortcuts import get_object_or_404
+from django.core.files.storage import default_storage
+from django.contrib.auth import authenticate
+from rest_framework.response import Response
+from rest_framework.decorators import api_view, permission_classes
+from rest_framework.permissions import IsAuthenticated, AllowAny
+from rest_framework import status
+from rest_framework_simplejwt.tokens import RefreshToken
+from .models import UploadedImage, PredictionResult
+from .serializers import UploadedImageSerializer, PredictionResultSerializer, UserSerializer
+from .ml_model.predict import predict_disease
 
 
 @api_view(['POST'])
-@login_required
-def upload_image(request):
-    if 'image' not in request.FILES:
-        return Response({"error": "No image uploaded"}, status=400)
-
-    image = request.FILES['image']
-    saved_path = default_storage.save(f"uploaded_images/{image.name}", image)
-    
-    prediction = predict_disease(saved_path)
-
-    uploaded_image = UploadedImage.objects.create(image=saved_path, predicted_disease=prediction)
-    return Response({"prediction": prediction})
-
-
+@permission_classes([AllowAny])  # Allows anyone to register
 def register(request):
-    if request.method == 'POST':
-        form = UserCreationForm(request.POST)
-        if form.is_valid():
-            form.save()
-            messages.success(request, 'Your account has been created! You can now log in.')
-            return redirect('login')
-    else:
-        form = UserCreationForm()
-    return render(request, 'register.html', {'form': form})
+    """ API endpoint for user registration """
+    serializer = UserSerializer(data=request.data)
+    if serializer.is_valid():
+        serializer.save()
+        return Response({'message': 'Account created successfully!'}, status=status.HTTP_201_CREATED)
+    return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 
-@login_required
-def view_results(request):
-    return render(request, 'view_results.html')
+@api_view(['POST'])
+@permission_classes([AllowAny])  # Allows login without authentication
+def login(request):
+    """ API endpoint for user authentication """
+    username = request.data.get('username')
+    password = request.data.get('password')
+    user = authenticate(username=username, password=password)
+    
+    if user:
+        refresh = RefreshToken.for_user(user)
+        return Response({
+            'access_token': str(refresh.access_token),
+            'refresh_token': str(refresh)
+        }, status=status.HTTP_200_OK)
+    
+    return Response({'error': 'Invalid credentials'}, status=status.HTTP_401_UNAUTHORIZED)
 
-@login_required
+
+@api_view(['POST'])
+# @permission_classes([IsAuthenticated]) 
+@permission_classes([AllowAny])
 def upload_image(request):
-    if request.method == 'POST' and request.FILES['image']:
-        # Save the uploaded image
-        image = request.FILES['image']
-        fs = FileSystemStorage()
-        image_path = fs.save(image.name, image)
-        image_url = fs.url(image_path)
+    """ API endpoint for uploading an image and predicting disease """
+    serializer = UploadedImageSerializer(data=request.data)
+    if serializer.is_valid():
+        image = serializer.validated_data['image']
+        saved_path = default_storage.save(f"uploaded_images/{image.name}", image)
 
-        # Predict the disease
-        class_name, confidence = predict_disease(fs.path(image_path))
+        class_name, confidence = predict_disease(saved_path)
 
-        # Save the result to the database
-        prediction = PredictionResult.objects.create(
-            image=image, class_name=class_name, confidence=confidence
-        )
+        uploaded_image = UploadedImage.objects.create(image=saved_path, predicted_disease=class_name)
+        prediction = PredictionResult.objects.create(image=saved_path, class_name=class_name, confidence=confidence)
 
-        # Render results
-        return render(request, 'results.html', {
-            'image_url': image_url,
-            'class_name': class_name,
-            'confidence': confidence
-        })
+        return Response({
+            "prediction": class_name,
+            "confidence": confidence,
+            "image_id": uploaded_image.id
+        }, status=status.HTTP_201_CREATED)
 
-    return render(request, 'upload_image.html')
+    return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
-@login_required
+
+@api_view(['GET'])
+# @permission_classes([IsAuthenticated])
+@permission_classes([AllowAny])
+
 def list_predictions(request):
+    """ API endpoint to retrieve all predictions """
     predictions = PredictionResult.objects.all()
-    return render(request, 'list_predictions.html', {'predictions': predictions})
+    serializer = PredictionResultSerializer(predictions, many=True)
+    return Response(serializer.data, status=status.HTTP_200_OK)
 
-@login_required
+
+@api_view(['DELETE'])
+# @permission_classes([IsAuthenticated])
+@permission_classes([AllowAny])  # Allows anyone to register
+
 def delete_prediction(request, pk):
+    """ API endpoint to delete a specific prediction """
     prediction = get_object_or_404(PredictionResult, pk=pk)
     prediction.delete()
-    return redirect('list_predictions')
+    return Response({'message': 'Prediction deleted successfully!'}, status=status.HTTP_204_NO_CONTENT)
+
+
+@api_view(['GET'])
+# @permission_classes([IsAuthenticated])
+@permission_classes([AllowAny])  # Allows anyone to register
+def dashboard(request):
+    """ API endpoint to retrieve summary statistics """
+    stats = {
+        'total_images': UploadedImage.objects.count(),
+        'total_predictions': PredictionResult.objects.count(),
+        'latest_prediction': PredictionResultSerializer(PredictionResult.objects.order_by('-created_at').first()).data,
+        'latest_image': UploadedImageSerializer(UploadedImage.objects.order_by('-uploaded_at').first()).data,
+    }
+    return Response(stats, status=status.HTTP_200_OK)
