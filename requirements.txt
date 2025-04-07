@@ -1,13 +1,41 @@
-Django==4.2  # Replace with your Django version
-djangorestframework==3.14.0  # For REST API functionality
-#tensorflow==2.10.0  # Replace with your TensorFlow version
-numpy==1.23.5  # Replace with your NumPy version
-#Pillow==9.3.0  # For image processing
-# pymongo
-python-dotenv==1.0.0
-python-decouple==3.8
-psycopg2-binary==2.9.10
-gunicorn==20.1.0
-djangorestframework-simplejwt==5.2.2
+# Core Django and REST Framework
+Django==5.2  # Latest Django version
+djangorestframework==3.15.2  # REST framework
+djangorestframework-simplejwt==5.5.0  # JWT authentication
 
+# Database Support
+psycopg2-binary==2.9.10  # PostgreSQL
+pymongo==4.11.3  # MongoDB
+mongoengine==0.29.1  # ORM-like interface for MongoDB
 
+# Machine Learning and Data Processing
+tensorflow==2.19.0  # Deep learning framework (if needed)
+numpy==2.1.3  # Numerical computing
+scipy==1.15.2  # Scientific computing
+pandas==2.2.3  # Data manipulation
+ml_dtypes==0.5.1  # ML-specific data types
+opencv-python==4.11.0.86  # Image processing
+
+# Image Handling
+pillow==11.1.0  # Image file processing
+
+# Environment Variables Management
+python-dotenv==1.1.0  # Load environment variables
+python-decouple==3.8  # Secure configuration
+
+# Production Server
+gunicorn==20.1.0  # WSGI server for deployment
+
+# Security and Authentication
+PyJWT==2.9.0  # JSON Web Token authentication
+
+# Debugging & Visualization
+matplotlib==3.10.1  # Data visualization
+plotly==6.0.1  # Interactive graphs
+tensorboard==2.19.0  # Deep learning performance tracking
+
+# Miscellaneous
+setuptools==78.1.0  # Package management tools
+sqlparse==0.5.3  # SQL query parsing
+requests==2.32.3  # HTTP requests handling
+tqdm==4.67.1  # Progress bars
