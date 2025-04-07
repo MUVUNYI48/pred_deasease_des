@@ -4,3 +4,5 @@ djangorestframework==3.14.0  # For REST API functionality
 numpy==1.23.5  # Replace with your NumPy version
 #Pillow==9.3.0  # For image processing
 # pymongo
+python-dotenv==1.0.0
+
