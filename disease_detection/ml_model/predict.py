@@ -27,7 +27,7 @@ def predict_disease(image_path):
     predictions = model.predict(img_array)
     print("predictions", predictions)
     class_index = np.argmax(predictions, axis=1)[0]  # Get the class index
-    confidence = predictions[0][class_index]  # Get confidence score
+    confidence = float(predictions[0][class_index])  # Get confidence score
 
     class_name = CLASS_NAMES[class_index]  # Map index to class name
     return class_name, confidence
