@@ -2,6 +2,9 @@ from tensorflow.keras.models import load_model
 from tensorflow.keras.preprocessing.image import load_img, img_to_array
 import numpy as np
 
+
+tf.config.set_visible_devices([], 'GPU')
+
 # Load the trained model
 model = load_model("tomato_disease_model.keras")
 
@@ -17,6 +20,8 @@ def predict_disease(image_path):
     img = load_img(image_path, target_size=(128, 128))  # Resize to match model input
     img_array = img_to_array(img) / 255.0  # Normalize pixel values
     img_array = np.expand_dims(img_array, axis=0)  # Add batch dimension
+
+
 
     # Make prediction
     predictions = model.predict(img_array)
