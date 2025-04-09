@@ -130,27 +130,36 @@ def upload_image(request):
 
 
 
-
 @api_view(["GET"])
-@permission_classes([IsAuthenticated])  # Requires authentication to list predictions
+#@permission_classes([IsAuthenticated])  # Requires authentication to list predictions
 def list_predictions(request):
     """ API endpoint to retrieve all predictions """
+    
+    auth_header=request.headers.get("Authorization")
+    if not auth_header:
+        return Response({"error":"Missing authentication token."}, status=status.HTTP_401_UNAUTHORIZED)
+
     predictions = PredictionResult.objects.all()
     serializer = PredictionResultSerializer(predictions, many=True)
     return Response(serializer.data, status=status.HTTP_200_OK)
 
 
 @api_view(["DELETE"])
-@permission_classes([IsAuthenticated])  # Requires authentication to delete predictions
+#@permission_classes([IsAuthenticated])  # Requires authentication to delete predictions
 def delete_prediction(request, pk):
     """ API endpoint to delete a specific prediction """
+     
+    auth_header=request.headers.get("Authorization")
+    if not auth_header:
+        return Response({"error":"Missing authentication token."}, status=status.HTTP_401_UNAUTHORIZED)
+
     prediction = get_object_or_404(PredictionResult, pk=pk)
     prediction.delete()
     return Response({"message": "Prediction deleted successfully!"}, status=status.HTTP_204_NO_CONTENT)
 
 
 @api_view(["GET"])
-@permission_classes([IsAuthenticated])  # Requires authentication to view dashboard
+#@permission_classes([IsAuthenticated])  # Requires authentication to view dashboard
 def dashboard(request):
     """ API endpoint to retrieve summary statistics """
     stats = {
