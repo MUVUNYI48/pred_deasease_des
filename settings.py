@@ -2,6 +2,8 @@ import os
 from dotenv import load_dotenv
 from mongoengine import connect
 from decouple import config
+import logging
+
 
 
 load_dotenv()  # Load environment variables from .env file
@@ -42,6 +44,10 @@ SECRET_KEY = os.getenv('SECRET_KEY', 'your-default-secret-key')
 DEBUG = os.getenv('DEBUG', 'True') == 'True'
 ALLOWED_HOSTS = os.getenv('ALLOWED_HOSTS', '*').split(',')
 
+# Disable CSRF for API requests
+CSRF_TRUSTED_ORIGINS = ["http://127.0.0.1:8000"]  # Add your server origin
+CSRF_COOKIE_SECURE = False  # For local development only
+
 # Authentication settings
 LOGIN_REDIRECT_URL = '/'  # Redirect to the homepage or any other desired URL
 LOGOUT_REDIRECT_URL = '/'  # Redirect after logout
@@ -64,7 +70,7 @@ MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
-    'django.middleware.csrf.CsrfViewMiddleware',
+    "django.middleware.csrf.CsrfViewMiddleware",  # Keep CSRF enabled for web
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
@@ -88,6 +94,28 @@ TEMPLATES = [
 ]
 
 
+LOGGING = {
+    'version': 1,
+    'disable_existing_loggers': False,
+    'handlers': {
+        'console': {
+            'level': 'DEBUG',
+            'class': 'logging.StreamHandler',
+        },
+    },
+    'loggers': {
+        'django': {
+            'handlers': ['console'],
+            'level': 'DEBUG',
+        },
+        'django.security': {
+            'handlers': ['console'],
+            'level': 'DEBUG',
+        },
+    },
+}
+
+
 # REST_FRAMEWORK = {
 #     'DEFAULT_AUTHENTICATION_CLASSES': (
 #         'rest_framework_simplejwt.authentication.JWTAuthentication',
@@ -97,7 +125,7 @@ TEMPLATES = [
 #     ),
 # }
 
-
+AUTH_USER_MODEL = "disease_detection.CustomUser"  # Ensure CustomUser is used
 
 
 REST_FRAMEWORK = {
@@ -110,24 +138,20 @@ REST_FRAMEWORK = {
 }
 
 
-# JWT Settings
-# SIMPLE_JWT = {
-#     'ACCESS_TOKEN_LIFETIME': timedelta(minutes=20),
-#     'REFRESH_TOKEN_LIFETIME': timedelta(days=1),
+AUTHENTICATION_BACKENDS = [
+    "django.contrib.auth.backends.ModelBackend",  # Default authentication backend
+]
 
-#     'AUTH_HEADER_TYPES': ('Bearer',),
-#     'AUTH_HEADER_NAME': 'HTTP_AUTHORIZATION',
-#     'USER_ID_FIELD': 'id',
-#     'USER_ID_CLAIM': 'user_id',
-#     'USER_AUTHENTICATION_RULE': 'rest_framework_simplejwt.authentication.default_user_authentication_rule',
 
-#     'AUTH_TOKEN_CLASSES': ('rest_framework_simplejwt.tokens.AccessToken',),
-#     'TOKEN_TYPE_CLAIM': 'token_type',
-#     'TOKEN_USER_CLASS': 'rest_framework_simplejwt.models.TokenUser',
+from datetime import timedelta
 
-#     'JTI_CLAIM': 'jti',
-
-# }
+SIMPLE_JWT = {
+    'ACCESS_TOKEN_LIFETIME': timedelta(minutes=60),
+    'REFRESH_TOKEN_LIFETIME': timedelta(days=1),
+    'AUTH_HEADER_TYPES': ('Bearer',),
+    'USER_ID_FIELD': 'id',
+    'USER_ID_CLAIM': 'user_id',
+}
 
 # Internationalization
 LANGUAGE_CODE = 'en-us'
