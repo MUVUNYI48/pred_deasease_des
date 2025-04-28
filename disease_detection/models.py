@@ -4,6 +4,7 @@ from django.db import models
 # Custom User Model to Add Fullname
 class CustomUser(AbstractUser):
     fullname = models.CharField(max_length=100, blank=True, null=True)
+    email = models.EmailField(unique=True)
 
     # Fix reverse accessor conflicts by adding related_name
     groups = models.ManyToManyField(Group, related_name="customuser_groups", blank=True)

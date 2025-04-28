@@ -6,12 +6,13 @@ from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import IsAuthenticated, AllowAny
 from rest_framework import status
 from rest_framework_simplejwt.tokens import RefreshToken
+from django.contrib.auth.hashers import check_password  # Import for password validation
 from .models import UploadedImage, PredictionResult, CustomUser
 from .serializers import UploadedImageSerializer, PredictionResultSerializer, UserSerializer
 from .ml_model.predict import predict_disease
 
 @api_view(["POST"])
-@permission_classes([AllowAny])  # Allows anyone to register
+# @permission_classes([AllowAny])  # Allows anyone to register
 def register(request):
     """ API endpoint for user registration """
     serializer = UserSerializer(data=request.data)
@@ -21,44 +22,44 @@ def register(request):
     return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 @api_view(["POST"])
-@permission_classes([AllowAny])
+# @permission_classes([AllowAny])  # Allows anyone to use this endpoint
 def login(request):
-    """ API endpoint for user authentication """
-    username = request.data.get("username")
+    """ API endpoint for user authentication using email and password """
+    email = request.data.get("email")
     password = request.data.get("password")
 
-    # Check if fields are provided
-    if not username or not password:
+    # Check if email and password are provided
+    if not email or not password:
         return Response(
-            {"error": "Both username and password are required."}, 
+            {"error": "Both email and password are required."}, 
             status=status.HTTP_400_BAD_REQUEST
         )
 
     try:
-        # Get user directly
-        user = CustomUser.objects.filter(username=username).first()
+        # Get the user with the provided email
+        user = CustomUser.objects.filter(email=email).first()
         if not user:
             return Response(
-                {"error": f"No user found with username: {username}."}, 
+                {"error": f"No user found with email: {email}."}, 
                 status=status.HTTP_401_UNAUTHORIZED
             )
-            
-        # Check user active status
+
+        # Check if the user's account is active
         if not user.is_active:
             return Response(
                 {"error": "This account is inactive."}, 
                 status=status.HTTP_401_UNAUTHORIZED
             )
-            
-        # Check password manually (bypassing authenticate which seems to have issues)
-        from django.contrib.auth.hashers import check_password
+
+        # Validate the password
         if check_password(password, user.password):
-            # Password is correct, generate tokens
+            # Password is correct, generate JWT tokens
             refresh = RefreshToken.for_user(user)
             return Response({
                 "access_token": str(refresh.access_token),
                 "refresh_token": str(refresh),
                 "username": user.username,
+                "email": user.email,
                 "fullname": user.fullname
             }, status=status.HTTP_200_OK)
         else:
@@ -66,13 +67,12 @@ def login(request):
                 {"error": "Incorrect password."}, 
                 status=status.HTTP_401_UNAUTHORIZED
             )
-            
+
     except Exception as e:
         return Response(
             {"error": f"Login error: {str(e)}"}, 
             status=status.HTTP_500_INTERNAL_SERVER_ERROR
         )
-
 
 # @api_view(["POST"])
 # def upload_image(request):
@@ -119,11 +119,16 @@ def upload_image(request):
 
         uploaded_image = UploadedImage.objects.create(image=saved_path, predicted_disease=class_name)
         prediction = PredictionResult.objects.create(image=saved_path, class_name=class_name, confidence=confidence)
+        print("information saved in database:",prediction)
 
         return Response({
             "prediction": class_name,
             "confidence": confidence,
-            "image_id": uploaded_image.id
+            "image_id": uploaded_image.id,
+            "image_name": image.name,  # Return the name of the uploaded image
+            "message":"uploaded successfully",# Return the ID of the prediction
+            "image_url": default_storage.url(saved_path)  # Return the URL of the uploaded image
+
         }, status=status.HTTP_201_CREATED)
 
     return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
@@ -131,7 +136,7 @@ def upload_image(request):
 
 
 @api_view(["GET"])
-#@permission_classes([IsAuthenticated])  # Requires authentication to list predictions
+# @permission_classes([IsAuthenticated])  # Requires authentication to list predictions
 def list_predictions(request):
     """ API endpoint to retrieve all predictions """
     

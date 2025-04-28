@@ -5,17 +5,21 @@ from rest_framework.exceptions import ValidationError
 # User Serializer for CustomUser Model
 class UserSerializer(serializers.ModelSerializer):
     fullname = serializers.CharField(max_length=100, required=True)
-    username = serializers.CharField(max_length=150, required=True)
+    email = serializers.EmailField(max_length=255, required=True)  # Email field added
     password = serializers.CharField(write_only=True)
+    username = serializers.CharField(max_length=150, required=True)  # Username added
     confirm_password = serializers.CharField(write_only=True)
 
     class Meta:
         model = CustomUser
-        fields = ["fullname", "username", "password", "confirm_password"]
+        fields = ["fullname", "username", "email", "password", "confirm_password"]
 
     def validate(self, data):
         if data["password"] != data["confirm_password"]:
             raise ValidationError({"error": "Passwords do not match. Please try again."})
+
+        if CustomUser.objects.filter(email=data["email"]).exists():
+            raise ValidationError({"error": f"Email '{data['email']}' is already taken. Please choose another."})
 
         if CustomUser.objects.filter(username=data["username"]).exists():
             raise ValidationError({"error": f"Username '{data['username']}' is already taken. Please choose another."})
@@ -26,9 +30,10 @@ class UserSerializer(serializers.ModelSerializer):
         password = validated_data.pop("password")
         validated_data.pop("confirm_password")
         
-        # Use create_user method to properly hash password
+        # Use create_user method to properly hash password and handle email
         user = CustomUser.objects.create_user(
-            username=validated_data["username"],
+            username=validated_data["username"],  # Username explicitly included
+            email=validated_data["email"],
             fullname=validated_data["fullname"],
             password=password
         )
