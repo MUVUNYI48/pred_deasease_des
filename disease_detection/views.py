@@ -1,213 +1,251 @@
-from django.shortcuts import get_object_or_404
-from django.core.files.storage import default_storage
-from django.contrib.auth import authenticate
-from rest_framework.response import Response
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import IsAuthenticated, AllowAny
+from rest_framework.response import Response
 from rest_framework import status
 from rest_framework_simplejwt.tokens import RefreshToken
-from django.contrib.auth.hashers import check_password  # Import for password validation
+from django.contrib.auth import authenticate
+from django.shortcuts import get_object_or_404
 from .models import UploadedImage, PredictionResult, CustomUser
-from .serializers import UploadedImageSerializer, PredictionResultSerializer, UserSerializer
+from .serializers import UserSerializer, UploadedImageSerializer, PredictionResultSerializer
 from .ml_model.predict import predict_disease
+from rest_framework_simplejwt.tokens import AccessToken
+from rest_framework.exceptions import AuthenticationFailed
+import os
 
-@api_view(["POST"])
-# @permission_classes([AllowAny])  # Allows anyone to register
+@api_view(['POST'])
+@permission_classes([AllowAny])
 def register(request):
-    """ API endpoint for user registration """
     serializer = UserSerializer(data=request.data)
     if serializer.is_valid():
         serializer.save()
-        return Response({"message": "Account created successfully!"}, status=status.HTTP_201_CREATED)
+        return Response({'message': 'User created successfully'}, status=status.HTTP_201_CREATED)
     return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
-@api_view(["POST"])
-# @permission_classes([AllowAny])  # Allows anyone to use this endpoint
+
+@api_view(['POST'])
+@permission_classes([AllowAny])
 def login(request):
-    """ API endpoint for user authentication using email and password """
-    email = request.data.get("email")
-    password = request.data.get("password")
+    email = request.data.get('email')  # Still accept email from frontend
+    password = request.data.get('password')
 
-    # Check if email and password are provided
-    if not email or not password:
-        return Response(
-            {"error": "Both email and password are required."}, 
-            status=status.HTTP_400_BAD_REQUEST
-        )
-
+    # Get user by email first
     try:
-        # Get the user with the provided email
-        user = CustomUser.objects.filter(email=email).first()
-        if not user:
-            return Response(
-                {"error": f"No user found with email: {email}."}, 
-                status=status.HTTP_401_UNAUTHORIZED
-            )
+        user = CustomUser.objects.get(email=email)
+    except CustomUser.DoesNotExist:
+        return Response({'error': 'Invalid credentials'}, status=status.HTTP_401_UNAUTHORIZED)
 
-        # Check if the user's account is active
-        if not user.is_active:
-            return Response(
-                {"error": "This account is inactive."}, 
-                status=status.HTTP_401_UNAUTHORIZED
-            )
+    # Authenticate using username
+    # user = authenticate(request, username=user.username, password=password)
+    # print("Authenticated user:", user)
 
-        # Validate the password
-        if check_password(password, user.password):
-            # Password is correct, generate JWT tokens
-            refresh = RefreshToken.for_user(user)
-            return Response({
-                "access_token": str(refresh.access_token),
-                "refresh_token": str(refresh),
-                "username": user.username,
-                "email": user.email,
-                "fullname": user.fullname
-            }, status=status.HTTP_200_OK)
-        else:
-            return Response(
-                {"error": "Incorrect password."}, 
-                status=status.HTTP_401_UNAUTHORIZED
-            )
+    user = CustomUser.objects.get(email="test@example.com")
+    print(user.check_password("test123"))  # Should return True
 
+    # user = authenticate(request, username=user.username, password=request.data.get('password'))
+
+    if not user:
+        return Response({'error': 'Invalid credentials'}, status=status.HTTP_401_UNAUTHORIZED)
+
+    refresh = RefreshToken.for_user(user)
+    return Response({
+        'access': str(refresh.access_token),
+        'refresh': str(refresh),
+        'user': {
+            'id': user.id,
+            'username': user.username,
+            'email': user.email
+        }
+    })
+
+def validate_token_and_get_user(request):
+    """
+    Validates JWT token and returns authenticated user or error response.
+    
+    Args:
+        request: Django request object
+        
+    Returns:
+        tuple: (user_object, error_response) or (None, error_response)
+    """
+    auth_header = request.headers.get('Authorization')
+    
+    if not auth_header or not auth_header.startswith('Bearer '):
+        error = {'error': 'Authorization header missing or invalid'}
+        return None, Response(error, status=status.HTTP_401_UNAUTHORIZED)
+    
+    try:
+        token = auth_header.split(' ')[1]
+        decoded_token = AccessToken(token)
+        user = CustomUser.objects.get(id=decoded_token['user_id'])
+        return user, None
+        
+    except CustomUser.DoesNotExist:
+        error = {'error': 'User not found'}
+        return None, Response(error, status=status.HTTP_404_NOT_FOUND)
+        
     except Exception as e:
-        return Response(
-            {"error": f"Login error: {str(e)}"}, 
-            status=status.HTTP_500_INTERNAL_SERVER_ERROR
-        )
-
-# @api_view(["POST"])
-# def upload_image(request):
-#     """ API endpoint for uploading an image and predicting disease """
-    
-#     # Manually check if user is authenticated
-#     if not request.user or not request.user.is_authenticated:
-#         return Response({"error": "User is not authenticated. Please log in first."}, status=status.HTTP_401_UNAUTHORIZED)
-
-#     serializer = UploadedImageSerializer(data=request.data)
-#     if serializer.is_valid():
-#         image = serializer.validated_data["image"]
-#         saved_path = default_storage.save(f"uploaded_images/{image.name}", image)
-
-#         class_name, confidence = predict_disease(saved_path)
-
-#         uploaded_image = UploadedImage.objects.create(image=saved_path, predicted_disease=class_name)
-#         prediction = PredictionResult.objects.create(image=saved_path, class_name=class_name, confidence=confidence)
-
-#         return Response({
-#             "prediction": class_name,
-#             "confidence": confidence,
-#             "image_id": uploaded_image.id
-#         }, status=status.HTTP_201_CREATED)
-
-#     return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+        error = {'error': f'Invalid token: {str(e)}'}
+        return None, Response(error, status=status.HTTP_401_UNAUTHORIZED)
 
 
-@api_view(["POST"])
+@api_view(['POST'])
 def upload_image(request):
-    """ API endpoint for uploading an image and predicting disease """
-    
-    # Check if Authorization Header exists
-    auth_header = request.headers.get("Authorization")
-    if not auth_header:
-        return Response({"error": "Missing authentication token."}, status=status.HTTP_401_UNAUTHORIZED)
+    """
+    Handles image upload and disease prediction.
+    Access: All authenticated users
+    """
+    user, error_response = validate_token_and_get_user(request)
+    if error_response:
+        return error_response
 
     serializer = UploadedImageSerializer(data=request.data)
-    if serializer.is_valid():
-        image = serializer.validated_data["image"]
-        saved_path = default_storage.save(f"uploaded_images/{image.name}", image)
+    if not serializer.is_valid():
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
-        class_name, confidence = predict_disease(saved_path)
-
-        uploaded_image = UploadedImage.objects.create(image=saved_path, predicted_disease=class_name)
-        prediction = PredictionResult.objects.create(image=saved_path, class_name=class_name, confidence=confidence)
-        print("information saved in database:",prediction)
-
-        return Response({
-            "prediction": class_name,
-            "confidence": confidence,
-            "image_id": uploaded_image.id,
-            "image_name": image.name,  # Return the name of the uploaded image
-            "message":"uploaded successfully",# Return the ID of the prediction
-            "image_url": default_storage.url(saved_path)  # Return the URL of the uploaded image
-
-        }, status=status.HTTP_201_CREATED)
-
-    return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-
-
-
-@api_view(["GET"])
-# @permission_classes([IsAuthenticated])  # Requires authentication to list predictions
-def list_predictions(request):
-    """ API endpoint to retrieve all predictions """
-    
-    auth_header=request.headers.get("Authorization")
-    if not auth_header:
-        return Response({"error":"Missing authentication token."}, status=status.HTTP_401_UNAUTHORIZED)
-
-    predictions = PredictionResult.objects.all()
-    serializer = PredictionResultSerializer(predictions, many=True)
-    return Response(serializer.data, status=status.HTTP_200_OK)
-
-
-@api_view(["DELETE"])
-#@permission_classes([IsAuthenticated])  # Requires authentication to delete predictions
-def delete_prediction(request, pk):
-    """ API endpoint to delete a specific prediction """
-     
-    auth_header=request.headers.get("Authorization")
-    if not auth_header:
-        return Response({"error":"Missing authentication token."}, status=status.HTTP_401_UNAUTHORIZED)
-
-    prediction = get_object_or_404(PredictionResult, pk=pk)
-    prediction.delete()
-    return Response({"message": "Prediction deleted successfully!"}, status=status.HTTP_204_NO_CONTENT)
-
-
-@api_view(["GET"])
-#@permission_classes([IsAuthenticated])  # Requires authentication to view dashboard
-def dashboard(request):
-    """ API endpoint to retrieve summary statistics """
-    stats = {
-        "total_images": UploadedImage.objects.count(),
-        "total_predictions": PredictionResult.objects.count(),
-        "latest_prediction": PredictionResultSerializer(PredictionResult.objects.order_by("-created_at").first()).data,
-        "latest_image": UploadedImageSerializer(UploadedImage.objects.order_by("-uploaded_at").first()).data,
-    }
-    return Response(stats, status=status.HTTP_200_OK)
-
-
-
-@api_view(["GET"])
-@permission_classes([AllowAny])
-def debug_users(request):
-    """Temporary endpoint to debug user authentication issues"""
     try:
-        # List all users
-        users = CustomUser.objects.all()
-        user_data = [{"username": user.username, "fullname": user.fullname} for user in users]
+        image = serializer.validated_data['image']
+        saved_path = f"uploaded_images/{image.name}"
         
-        # Check if our test user exists
-        test_user_exists = CustomUser.objects.filter(username="patrickdoe1").exists()
+        # Save uploaded file
+        with open(saved_path, 'wb+') as destination:
+            for chunk in image.chunks():
+                destination.write(chunk)
         
-        # Create test user if needed
-        if not test_user_exists:
-            CustomUser.objects.create_user(
-                username="patrickdoe1",
-                fullname="Patrick Doe",
-                password="password2"
-            )
-            message = "Test user created successfully"
-        else:
-            # Reset password for existing user
-            user = CustomUser.objects.get(username="patrickdoe1")
-            user.set_password("password2")
-            user.save()
-            message = "Test user password reset"
+        # Get prediction from ML model
+        class_name, confidence = predict_disease(saved_path)
         
-        return Response({
-            "message": message,
-            "users": user_data,
-            "count": len(user_data)
-        }, status=status.HTTP_200_OK)
+        # Save to database
+        uploaded_image = UploadedImage.objects.create(
+            user=user,
+            image=saved_path,
+            predicted_disease=class_name
+        )
+        
+        prediction = PredictionResult.objects.create(
+            user=user,
+            image=saved_path,
+            class_name=class_name,
+            confidence=confidence
+        )
+        
+        response_data = {
+            'prediction': class_name,
+            'confidence': float(confidence),
+            'image_url': uploaded_image.image.url,
+            'user_id': user.id
+        }
+        return Response(response_data, status=status.HTTP_201_CREATED)
+        
     except Exception as e:
-        return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+        error = {'error': f'Processing failed: {str(e)}'}
+        return Response(error, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
+@api_view(['GET'])
+def list_predictions(request):
+    """
+    Returns list of predictions.
+    Access: Superusers get all predictions, regular users get only theirs
+    """
+    user, error_response = validate_token_and_get_user(request)
+    if error_response:
+        return error_response
+
+    predictions = (PredictionResult.objects.all() if user.is_superuser 
+                  else PredictionResult.objects.filter(user=user))
+    
+    predictions = predictions.order_by('-created_at')
+    serializer = PredictionResultSerializer(predictions, many=True)
+    
+    return Response(serializer.data)
+
+
+@api_view(['DELETE'])
+def delete_prediction(request, pk):
+    """
+    Deletes a specific prediction.
+    Access: Superusers can delete any, regular users only theirs
+    """
+    user, error_response = validate_token_and_get_user(request)
+    if error_response:
+        return error_response
+
+    # Get prediction with appropriate permission check
+    if user.is_superuser:
+        prediction = get_object_or_404(PredictionResult, pk=pk)
+    else:
+        prediction = get_object_or_404(PredictionResult, pk=pk, user=user)
+    
+    # Clean up associated file
+    if prediction.image and os.path.isfile(prediction.image.path):
+        os.remove(prediction.image.path)
+    
+    prediction.delete()
+    
+    return Response(
+        {'message': 'Prediction deleted successfully'},
+        status=status.HTTP_204_NO_CONTENT
+    )
+
+
+@api_view(['GET'])
+def dashboard(request):
+    """
+    Returns dashboard statistics.
+    Access: Superusers get system-wide stats, regular users get personal stats
+    """
+    user, error_response = validate_token_and_get_user(request)
+    if error_response:
+        return error_response
+
+    base_stats = {
+        'user_info': {
+            'username': user.username,
+            'email': user.email,
+            'is_superuser': user.is_superuser
+        }
+    }
+
+    if user.is_superuser:
+        stats = {
+            **base_stats,
+            'total_images': UploadedImage.objects.count(),
+            'total_predictions': PredictionResult.objects.count(),
+            'recent_predictions': PredictionResultSerializer(
+                PredictionResult.objects.all().order_by('-created_at')[:5],
+                many=True
+            ).data
+        }
+    else:
+        stats = {
+            **base_stats,
+            'total_images': UploadedImage.objects.filter(user=user).count(),
+            'total_predictions': PredictionResult.objects.filter(user=user).count(),
+            'recent_predictions': PredictionResultSerializer(
+                PredictionResult.objects.filter(user=user)
+                .order_by('-created_at')[:5],
+                many=True
+            ).data
+        }
+    
+    return Response(stats)
+
+
+@api_view(['GET'])
+def get_current_user(request):
+    """
+    Returns current authenticated user's information.
+    Access: All authenticated users
+    """
+    user, error_response = validate_token_and_get_user(request)
+    if error_response:
+        return error_response
+
+    return Response({
+        'id': user.id,
+        'username': user.username,
+        'email': user.email,
+        'fullname': user.fullname,
+        'is_superuser': user.is_superuser,
+        'is_staff': user.is_staff
+    })

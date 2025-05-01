@@ -1,16 +1,15 @@
 from django.urls import path
-from .views import register, login, upload_image, list_predictions, delete_prediction, dashboard,debug_users
+from .views import register, login, upload_image, list_predictions, delete_prediction, dashboard,get_current_user
 from rest_framework_simplejwt.views import TokenRefreshView
 
 urlpatterns = [
-    path('register/', register, name='api-register'),
-    path('login/', login, name='api-login'),
+   path('auth/register/', register, name='register'),
+    path('auth/login/', login, name='login'),
     path('upload/', upload_image, name='api-upload'),
     path('predictions/', list_predictions, name='api-predictions'),
     path('predictions/<int:pk>/delete/', delete_prediction, name='api-delete-prediction'),
     path('dashboard/', dashboard, name='api-dashboard'),
-    path('api/debug-users/', debug_users, name='debug_users'),  # Add this temporary debugging endpoint
-
+    path('auth/user/', get_current_user, name='api-get-current-user'),
     path('token/refresh/', TokenRefreshView.as_view(), name='token-refresh'),  # JWT refresh token
 ]
 

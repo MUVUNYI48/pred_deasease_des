@@ -2,51 +2,39 @@ from rest_framework import serializers
 from .models import CustomUser, UploadedImage, PredictionResult
 from rest_framework.exceptions import ValidationError
 
-# User Serializer for CustomUser Model
 class UserSerializer(serializers.ModelSerializer):
-    fullname = serializers.CharField(max_length=100, required=True)
-    email = serializers.EmailField(max_length=255, required=True)  # Email field added
     password = serializers.CharField(write_only=True)
-    username = serializers.CharField(max_length=150, required=True)  # Username added
     confirm_password = serializers.CharField(write_only=True)
 
     class Meta:
         model = CustomUser
-        fields = ["fullname", "username", "email", "password", "confirm_password"]
+        fields = ['username', 'email', 'fullname', 'password', 'confirm_password']
 
     def validate(self, data):
-        if data["password"] != data["confirm_password"]:
-            raise ValidationError({"error": "Passwords do not match. Please try again."})
-
-        if CustomUser.objects.filter(email=data["email"]).exists():
-            raise ValidationError({"error": f"Email '{data['email']}' is already taken. Please choose another."})
-
-        if CustomUser.objects.filter(username=data["username"]).exists():
-            raise ValidationError({"error": f"Username '{data['username']}' is already taken. Please choose another."})
-
+        if data['password'] != data['confirm_password']:
+            raise serializers.ValidationError("Passwords do not match")
         return data
 
     def create(self, validated_data):
-        password = validated_data.pop("password")
-        validated_data.pop("confirm_password")
-        
-        # Use create_user method to properly hash password and handle email
         user = CustomUser.objects.create_user(
-            username=validated_data["username"],  # Username explicitly included
-            email=validated_data["email"],
-            fullname=validated_data["fullname"],
-            password=password
+            username=validated_data['username'],
+            email=validated_data['email'],
+            fullname=validated_data['fullname'],
+            password=validated_data['password']
         )
         return user
 
-# Serializer for Uploaded Images
 class UploadedImageSerializer(serializers.ModelSerializer):
     class Meta:
         model = UploadedImage
-        fields = "__all__"
+        fields = ['image']  # Frontend only needs to send the image file
 
-# Serializer for Prediction Results
 class PredictionResultSerializer(serializers.ModelSerializer):
+    image_url = serializers.SerializerMethodField()
+
     class Meta:
         model = PredictionResult
-        fields = "__all__"
+        fields = ['id', 'image_url', 'class_name', 'confidence', 'created_at']
+
+    def get_image_url(self, obj):
+        return obj.image.url if obj.image else None
