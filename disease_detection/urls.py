@@ -3,8 +3,8 @@ from .views import register, login, upload_image, list_predictions, delete_predi
 from rest_framework_simplejwt.views import TokenRefreshView
 
 urlpatterns = [
-   path('auth/register/', register, name='register'),
-    path('auth/login/', login, name='login'),
+   path('register/', register, name='register'),
+    path('login/', login, name='login'),
     path('upload/', upload_image, name='api-upload'),
     path('predictions/', list_predictions, name='api-predictions'),
     path('predictions/<int:pk>/delete/', delete_prediction, name='api-delete-prediction'),

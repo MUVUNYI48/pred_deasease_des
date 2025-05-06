@@ -4,13 +4,15 @@ from decouple import config
 
 load_dotenv()  # Load environment variables from .env file
 
-# Build paths inside the project like this: BASE_DIR / 'subdir'.
+# Build paths inside the project
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
 # Security settings
-SECRET_KEY = config('SECRET_KEY', default='your-secret-key')  # Store your secret key in .env
+SECRET_KEY = config('SECRET_KEY', default='your-secret-key')  # Keep your secret key secure
 DEBUG = config('DEBUG', default=True, cast=bool)
-ALLOWED_HOSTS = config('ALLOWED_HOSTS', default='').split(',')
+
+# Allow hosts for local development
+ALLOWED_HOSTS = config('ALLOWED_HOSTS', default='localhost,127.0.0.1').split(',')
 
 # Application definition
 INSTALLED_APPS = [
@@ -21,6 +23,7 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
+    'corsheaders',
 ]
 
 # Authentication redirects
@@ -31,6 +34,7 @@ LOGOUT_REDIRECT_URL = '/login/'
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
+    'corsheaders.middleware.CorsMiddleware',  # CORS middleware needs to be early
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
@@ -39,6 +43,20 @@ MIDDLEWARE = [
 ]
 
 ROOT_URLCONF = 'tomato_ai.urls'
+
+# CORS settings
+CORS_ALLOWED_ORIGINS = [
+    "http://localhost:3000",
+    "http://127.0.0.1:3000",
+]
+# ALLOWED_HOSTS = config('ALLOWED_HOSTS', default='localhost,127.0.0.1,localhost:8000').split(',')
+
+ALLOWED_HOSTS = [
+    "localhost",
+    "127.0.0.1",
+    "localhost:8000",  # Explicitly add this if needed
+]
+
 
 # Template settings
 TEMPLATES = [
@@ -65,8 +83,8 @@ DATABASES = {
         'ENGINE': 'django.db.backends.postgresql',
         'NAME': config('DATABASE_NAME', default='tomato_ai_db'),
         'USER': config('DATABASE_USER', default='neondb_owner'),
-        'PASSWORD': config('DATABASE_PASSWORD', default='npg_gcQE1hZU9LWx'),
-        'HOST': config('DATABASE_HOST', default='ep-dawn-cherry-a5vt1m6o-pooler.us-east-2.aws.neon.tech'),
+        'PASSWORD': config('DATABASE_PASSWORD', default='your-secure-password'),
+        'HOST': config('DATABASE_HOST', default='your-database-host'),
         'PORT': config('DATABASE_PORT', default='5432'),
         'OPTIONS': {
             'sslmode': 'require',

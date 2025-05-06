@@ -22,30 +22,29 @@ def register(request):
     return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 
+
+
 @api_view(['POST'])
-@permission_classes([AllowAny])
 def login(request):
-    email = request.data.get('email')  # Still accept email from frontend
+    email = request.data.get('email')
     password = request.data.get('password')
 
-    # Get user by email first
+    if not email or not password:
+        return Response({
+            'error': 'Email and password are required'},
+            status=status.HTTP_400_BAD_REQUEST)
+
+    # Find user by email
     try:
         user = CustomUser.objects.get(email=email)
     except CustomUser.DoesNotExist:
         return Response({'error': 'Invalid credentials'}, status=status.HTTP_401_UNAUTHORIZED)
 
-    # Authenticate using username
-    # user = authenticate(request, username=user.username, password=password)
-    # print("Authenticated user:", user)
-
-    user = CustomUser.objects.get(email="test@example.com")
-    print(user.check_password("test123"))  # Should return True
-
-    # user = authenticate(request, username=user.username, password=request.data.get('password'))
-
-    if not user:
+    # 🔑 **Manually Validate Password**
+    if not user.check_password(password):  # Directly verify password against stored hash
         return Response({'error': 'Invalid credentials'}, status=status.HTTP_401_UNAUTHORIZED)
 
+    # Generate JWT tokens
     refresh = RefreshToken.for_user(user)
     return Response({
         'access': str(refresh.access_token),
@@ -55,7 +54,10 @@ def login(request):
             'username': user.username,
             'email': user.email
         }
-    })
+    })   
+    
+
+
 
 def validate_token_and_get_user(request):
     """
@@ -211,6 +213,7 @@ def dashboard(request):
             **base_stats,
             'total_images': UploadedImage.objects.count(),
             'total_predictions': PredictionResult.objects.count(),
+            'total_users': CustomUser.objects.count(),
             'recent_predictions': PredictionResultSerializer(
                 PredictionResult.objects.all().order_by('-created_at')[:5],
                 many=True

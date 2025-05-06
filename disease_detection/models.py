@@ -27,7 +27,7 @@ class UploadedImage(models.Model):
         ordering = ['-uploaded_at']
 
     def __str__(self):
-        return f"{self.user.username}'s image: {self.image.name}"
+      return f"{self.user.username}'s image: {self.image.name}"
 
 class PredictionResult(models.Model):
     user = models.ForeignKey(CustomUser, on_delete=models.CASCADE)
