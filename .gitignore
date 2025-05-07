@@ -4,6 +4,7 @@ dataset/
 # Ignore uploaded and predicted images
 uploaded_images/
 predicted_images/
+profile_images/
 
 # Ignore model files
 # *.keras

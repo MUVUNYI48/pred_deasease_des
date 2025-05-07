@@ -9,10 +9,12 @@ from .models import UploadedImage, PredictionResult, CustomUser
 from .serializers import UserSerializer, UploadedImageSerializer, PredictionResultSerializer
 from .ml_model.predict import predict_disease
 from rest_framework_simplejwt.tokens import AccessToken
+from django.core.mail import send_mail
+from django.contrib.auth.tokens import default_token_generator
 from rest_framework.exceptions import AuthenticationFailed
 import os
 
-@api_view(['POST'])
+@api_view(["POST"])
 @permission_classes([AllowAny])
 def register(request):
     data = request.data.copy()
@@ -23,8 +25,13 @@ def register(request):
     serializer = UserSerializer(data=data)
     
     if serializer.is_valid():
-        serializer.save()
-        return Response({'message': 'User created successfully'}, status=status.HTTP_201_CREATED)
+        user = serializer.save()  
+        user_data = UserSerializer(user).data  
+
+        return Response({
+            "message": "User created successfully",
+            "user": user_data  
+        }, status=status.HTTP_201_CREATED)
     
     return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
@@ -370,7 +377,36 @@ def delete_user(request, pk):
         except CustomUser.DoesNotExist:
             return Response({"error": "User not found."}, status=status.HTTP_404_NOT_FOUND)
         
-        
+
+@api_view(["POST"])
+def forgot_password(request):
+    """
+    Handles password reset request by sending a reset link.
+    Access: Open to all users
+    """
+    email = request.data.get("email")
+    if not email:
+        return Response({"error": "Email is required."}, status=status.HTTP_400_BAD_REQUEST)
+
+    try:
+        user = CustomUser.objects.get(email=email)
+        token = default_token_generator.make_token(user)
+        reset_link = f"http://127.0.0.1:8000/auth/reset-password/{user.pk}/{token}/"
+
+        send_mail(
+            subject="Password Reset Request",
+            message=f"Click the link below to reset your password:\n{reset_link}",
+            from_email="no-reply@yourdomain.com",
+            recipient_list=[email],
+        )
+
+        return Response({"message": "Password reset link sent successfully."}, status=status.HTTP_200_OK)
+
+    except CustomUser.DoesNotExist:
+        return Response({"error": "User with this email does not exist."}, status=status.HTTP_404_NOT_FOUND)
+    except Exception as e:
+        return Response({"error": f"Failed to send email: {str(e)}"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+  
 # delete user account  
       
 @api_view(["DELETE"])
