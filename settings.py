@@ -87,7 +87,7 @@ REST_FRAMEWORK = {
     ),
     "DEFAULT_PERMISSION_CLASSES": (
         "rest_framework.permissions.IsAuthenticated",
-    ),
+    ),g
 }
 
 AUTH_USER_MODEL = "disease_detection.CustomUser"

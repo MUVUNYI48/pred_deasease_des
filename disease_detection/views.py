@@ -12,7 +12,11 @@ from rest_framework_simplejwt.tokens import AccessToken
 from django.core.mail import send_mail
 from django.contrib.auth.tokens import default_token_generator
 from rest_framework.exceptions import AuthenticationFailed
+from rest_framework.pagination import PageNumberPagination
 import os
+
+
+
 
 @api_view(["POST"])
 @permission_classes([AllowAny])
@@ -30,7 +34,8 @@ def register(request):
 
         return Response({
             "message": "User created successfully",
-            "user": user_data  
+            "user_id": user.id,
+            "user": user_data 
         }, status=status.HTTP_201_CREATED)
     
     return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
@@ -177,23 +182,89 @@ def upload_image(request):
 
 
 
-@api_view(['GET'])
+# @api_view(['GET'])
+# def list_predictions(request):
+#     """
+#     Returns list of predictions.
+#     Access: Superusers get all predictions, regular users get only theirs
+#     """
+#     user, error_response = validate_token_and_get_user(request)
+#     if error_response:
+#         return error_response
+
+#     predictions = (PredictionResult.objects.all() if user.is_superuser 
+#                   else PredictionResult.objects.filter(user=user))
+    
+#     predictions = predictions.order_by('-created_at')
+#     serializer = PredictionResultSerializer(predictions, many=True)
+    
+#     return Response(serializer.data)
+
+
+
+
+class CustomPagination(PageNumberPagination):
+    page_size = 10  # ✅ Default items per page
+    page_size_query_param = "page_size"
+    max_page_size = 50  # ✅ Allow up to 50 items per page
+
+@api_view(["GET"])
 def list_predictions(request):
     """
-    Returns list of predictions.
-    Access: Superusers get all predictions, regular users get only theirs
+    Returns paginated predictions filtered by user ID.
+    - Superusers can view all predictions or filter by user ID (if exists).
+    - Regular users can only view their own predictions.
     """
     user, error_response = validate_token_and_get_user(request)
     if error_response:
         return error_response
 
-    predictions = (PredictionResult.objects.all() if user.is_superuser 
-                  else PredictionResult.objects.filter(user=user))
+    user_id = request.GET.get("user_id")
+
+    if user.is_superuser and user_id:
+        # ✅ Check if the user exists before filtering predictions
+        if not CustomUser.objects.filter(id=user_id).exists():
+            return Response({"error": "User not found."}, status=status.HTTP_404_NOT_FOUND)
+        predictions = PredictionResult.objects.filter(user_id=user_id)
+    else:
+        predictions = PredictionResult.objects.filter(user=user)
+
+    predictions = predictions.order_by("-created_at")
+
+    # ✅ Apply pagination
+    paginator = CustomPagination()
+    paginated_predictions = paginator.paginate_queryset(predictions, request)
+
+    serializer = PredictionResultSerializer(paginated_predictions, many=True)
     
-    predictions = predictions.order_by('-created_at')
+    return paginator.get_paginated_response(serializer.data)
+
+
+
+
+@api_view(["GET"])
+def prediction_detail(request, user_id):
+    """
+    Returns all predictions for a specific user ID.
+    - Superusers can view any user's predictions.
+    - Regular users can only view their own predictions.
+    """
+    user, error_response = validate_token_and_get_user(request)
+    if error_response:
+        return error_response
+
+    # if not user.is_superuser and user.id != user_id:
+    #     return Response({"error": "Unauthorized access to these predictions."}, status=status.HTTP_403_FORBIDDEN)
+
+    predictions = PredictionResult.objects.filter(user_id=user_id).order_by("-created_at")
+
+    if not predictions.exists():
+        return Response({"error": "No predictions found for this user."}, status=status.HTTP_404_NOT_FOUND)
+
     serializer = PredictionResultSerializer(predictions, many=True)
-    
-    return Response(serializer.data)
+    return Response(serializer.data, status=status.HTTP_200_OK)
+
+
 
 
 @api_view(['DELETE'])

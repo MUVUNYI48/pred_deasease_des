@@ -1,5 +1,5 @@
 from django.urls import path
-from .views import register,forgot_password, login,delete_account, upload_image, list_predictions, delete_prediction, dashboard,get_current_user,list_users,create_user,update_user,delete_user
+from .views import register,forgot_password,prediction_detail, login,delete_account, upload_image, list_predictions, delete_prediction, dashboard,get_current_user,list_users,create_user,update_user,delete_user
 from rest_framework_simplejwt.views import TokenRefreshView
 
 urlpatterns = [
@@ -7,6 +7,8 @@ urlpatterns = [
     path('login/', login, name='login'),
     path('upload/', upload_image, name='api-upload'),
     path('predictions/', list_predictions, name='api-predictions'),
+    # path('predictions/<int:pk>/', prediction_detail, name='api-prediction-detail'),
+    path("predictions/user/<int:user_id>/", prediction_detail, name="api-user-predictions"),  #  Get personalized predictions
     path('predictions/<int:pk>/delete/', delete_prediction, name='api-delete-prediction'),
     path('dashboard/', dashboard, name='api-dashboard'),
     path('auth/user/', get_current_user, name='api-get-current-user'),
@@ -14,6 +16,7 @@ urlpatterns = [
     path("auth/forgot-password/", forgot_password, name="forgot-password"),
     
 ]
+
 
 urlpatterns += [
     path("admin/users/", list_users, name="admin-list-users"),
