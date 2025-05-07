@@ -1,5 +1,5 @@
 from django.urls import path
-from .views import register, login, upload_image, list_predictions, delete_prediction, dashboard,get_current_user
+from .views import register, login,delete_account, upload_image, list_predictions, delete_prediction, dashboard,get_current_user,list_users,create_user,update_user,delete_user
 from rest_framework_simplejwt.views import TokenRefreshView
 
 urlpatterns = [
@@ -11,7 +11,17 @@ urlpatterns = [
     path('dashboard/', dashboard, name='api-dashboard'),
     path('auth/user/', get_current_user, name='api-get-current-user'),
     path('token/refresh/', TokenRefreshView.as_view(), name='token-refresh'),  # JWT refresh token
+    
 ]
+
+urlpatterns += [
+    path("admin/users/", list_users, name="admin-list-users"),
+    path("admin/users/create/", create_user, name="admin-create-user"),
+    path("admin/users/<int:pk>/update/", update_user, name="admin-update-user"),
+    path("admin/users/<int:pk>/delete/", delete_user, name="admin-delete-user"),
+    path("account/delete/", delete_account, name="delete-account"),
+]
+
 
 
 # filepath: /home/muvunyi/Documents/code/tomato_ai/disease_detection/ml_model/predict.py

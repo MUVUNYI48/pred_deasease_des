@@ -8,21 +8,28 @@ class UserSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = CustomUser
-        fields = ['username', 'email', 'fullname', 'password', 'confirm_password']
+        fields = ["username", "email", "fullname", "password", "confirm_password", "district", "phone_number", "image_profile"]  # ✅ Correct field name
 
     def validate(self, data):
-        if data['password'] != data['confirm_password']:
+        if data["password"] != data["confirm_password"]:
             raise serializers.ValidationError("Passwords do not match")
+        if CustomUser.objects.filter(username=data["username"]).exists():
+            raise serializers.ValidationError("Username is already taken")
         return data
 
     def create(self, validated_data):
-        user = CustomUser.objects.create_user(
-            username=validated_data['username'],
-            email=validated_data['email'],
-            fullname=validated_data['fullname'],
-            password=validated_data['password']
+        validated_data.pop("confirm_password")  # Remove unnecessary confirm_password field
+        
+        return CustomUser.objects.create_user(
+            username=validated_data["username"],
+            email=validated_data["email"],
+            fullname=validated_data["fullname"],
+            phone_number=validated_data["phone_number"],
+            district=validated_data["district"],
+            password=validated_data["password"],
+            image_profile=validated_data.get("image_profile")  # ✅ Use correct field name
         )
-        return user
+
 
 class UploadedImageSerializer(serializers.ModelSerializer):
     class Meta:

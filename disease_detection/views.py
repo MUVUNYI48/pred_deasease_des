@@ -15,10 +15,17 @@ import os
 @api_view(['POST'])
 @permission_classes([AllowAny])
 def register(request):
-    serializer = UserSerializer(data=request.data)
+    data = request.data.copy()
+    
+    if "username" not in data:  # Auto-generate username if missing
+        data["username"] = data["email"].split("@")[0]
+
+    serializer = UserSerializer(data=data)
+    
     if serializer.is_valid():
         serializer.save()
         return Response({'message': 'User created successfully'}, status=status.HTTP_201_CREATED)
+    
     return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 
@@ -40,7 +47,7 @@ def login(request):
     except CustomUser.DoesNotExist:
         return Response({'error': 'Invalid credentials'}, status=status.HTTP_401_UNAUTHORIZED)
 
-    # 🔑 **Manually Validate Password**
+    #  Manually Validate Password
     if not user.check_password(password):  # Directly verify password against stored hash
         return Response({'error': 'Invalid credentials'}, status=status.HTTP_401_UNAUTHORIZED)
 
@@ -90,7 +97,21 @@ def validate_token_and_get_user(request):
         return None, Response(error, status=status.HTTP_401_UNAUTHORIZED)
 
 
-@api_view(['POST'])
+CLASS_NAMES = {
+    "Bacterial Spot": "Apply copper-based fungicides and avoid overhead watering.",
+    "Early Blight": "Use fungicides with chlorothalonil and remove affected leaves.",
+    "Late Blight": "Destroy infected plants and apply systemic fungicides.",
+    "Leaf Mold": "Improve air circulation and apply fungicides containing mancozeb.",
+    "Septoria Leaf Spot": "Avoid watering leaves and apply fungicides regularly.",
+    "Spider Mites": "Spray neem oil or insecticidal soap to control infestation.",
+    "Target Spot": "Apply organic fungicides and avoid excessive humidity.",
+    "Yellow Leaf Curl Virus": "Control whiteflies and use virus-resistant varieties.",
+    "Mosaic Virus": "Remove infected plants and disinfect garden tools.",
+    "Healthy": "Maintain good soil health and regular watering.",
+    "Other": "Monitor plant health and apply general care techniques."
+}
+
+@api_view(["POST"])
 def upload_image(request):
     """
     Handles image upload and disease prediction.
@@ -105,16 +126,19 @@ def upload_image(request):
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
     try:
-        image = serializer.validated_data['image']
+        image = serializer.validated_data["image"]
         saved_path = f"uploaded_images/{image.name}"
         
         # Save uploaded file
-        with open(saved_path, 'wb+') as destination:
+        with open(saved_path, "wb+") as destination:
             for chunk in image.chunks():
                 destination.write(chunk)
         
-        # Get prediction from ML model
-        class_name, confidence = predict_disease(saved_path)
+        # Get prediction
+        class_name, confidence = predict_disease(saved_path)  # ✅ Ignore recommendation from function
+        
+        # ✅ Fetch recommendation from CLASS_NAMES dictionary
+        recommendation = CLASS_NAMES.get(class_name, "No specific recommendation available.")
         
         # Save to database
         uploaded_image = UploadedImage.objects.create(
@@ -127,20 +151,23 @@ def upload_image(request):
             user=user,
             image=saved_path,
             class_name=class_name,
-            confidence=confidence
+            confidence=confidence,
+            recommendation=recommendation  # ✅ Store recommendation based on detected disease
         )
         
         response_data = {
-            'prediction': class_name,
-            'confidence': float(confidence),
-            'image_url': uploaded_image.image.url,
-            'user_id': user.id
+            "prediction": class_name,
+            "confidence": float(confidence),
+            "recommendation": recommendation,  # ✅ Include recommendation in response
+            "image_url": uploaded_image.image.url,
+            "user_id": user.id
         }
         return Response(response_data, status=status.HTTP_201_CREATED)
         
     except Exception as e:
-        error = {'error': f'Processing failed: {str(e)}'}
+        error = {"error": f"Processing failed: {str(e)}"}
         return Response(error, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
 
 
 @api_view(['GET'])
@@ -252,3 +279,108 @@ def get_current_user(request):
         'is_superuser': user.is_superuser,
         'is_staff': user.is_staff
     })
+    
+    
+# crud operations on user must be done by super admin    
+    
+    
+def is_super_admin(user):
+        return user.is_authenticated and user.is_super_admin  # ✅ Super Admin check
+
+
+
+@api_view(["POST"])
+def create_user(request):
+    user, error_response = validate_token_and_get_user(request)
+    if error_response:
+        return error_response  # Return error if token is invalid
+
+    # if not is_super_admin(user):
+        # return Response({"error": "Only Super Admin can create users."}, status=status.HTTP_403_FORBIDDEN)
+    
+    if user.is_superuser:
+
+        serializer = UserSerializer(data=request.data)
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data, status=status.HTTP_201_CREATED)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+
+@api_view(["GET"])
+def list_users(request):
+    user, error_response = validate_token_and_get_user(request)
+    if error_response:
+        return error_response  # Return error if token is invalid
+
+    # if not is_super_admin(user):
+    #     return Response({"error": "Only Super Admin can list users."}, status=status.HTTP_403_FORBIDDEN)
+    
+    if user.is_superuser:
+
+        users = CustomUser.objects.all()
+        serializer = UserSerializer(users, many=True)
+        return Response(serializer.data)
+    else:
+        return Response({"error": "Only Super Admin can list users."}, status=status.HTTP_403_FORBIDDEN)
+
+
+
+@api_view(["PUT", "PATCH"])
+def update_user(request, pk):
+    user, error_response = validate_token_and_get_user(request)
+    if error_response:
+        return error_response  # Return error if token is invalid
+
+    # if not is_super_admin(user):
+    #     return Response({"error": "Only Super Admin can update users."}, status=status.HTTP_403_FORBIDDEN)
+
+    
+    if user.is_superuser:
+
+    
+        try:
+            user_to_update = CustomUser.objects.get(pk=pk)
+        except CustomUser.DoesNotExist:
+            return Response({"error": "User not found."}, status=status.HTTP_404_NOT_FOUND)
+
+        serializer = UserSerializer(user_to_update, data=request.data, partial=True)
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+
+
+@api_view(["DELETE"])
+def delete_user(request, pk):
+    user, error_response = validate_token_and_get_user(request)
+    if error_response:
+        return error_response  # Return error if token is invalid
+
+    # if not is_super_admin(user):
+    #     return Response({"error": "Only Super Admin can delete users."}, status=status.HTTP_403_FORBIDDEN)
+    
+    if user.is_superuser:
+
+        try:
+            user_to_delete = CustomUser.objects.get(pk=pk)
+            user_to_delete.delete();
+            return Response({"message": "User deleted successfully."}, status=status.HTTP_204_NO_CONTENT)
+        except CustomUser.DoesNotExist:
+            return Response({"error": "User not found."}, status=status.HTTP_404_NOT_FOUND)
+        
+        
+# delete user account  
+      
+@api_view(["DELETE"])
+def delete_account(request):
+    user, error_response = validate_token_and_get_user(request)
+    if error_response:
+        return error_response  # Return error if token is invalid
+
+    try:
+        user.delete()
+        return Response({"message": "Account deleted successfully."}, status=status.HTTP_204_NO_CONTENT)
+    except Exception as e:
+        return Response({"error": f"Error deleting account: {str(e)}"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
