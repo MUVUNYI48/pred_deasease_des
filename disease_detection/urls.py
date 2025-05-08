@@ -22,7 +22,7 @@ urlpatterns = [
 urlpatterns += [
     path("admin/users/", list_users, name="admin-list-users"),
     path("admin/users/create/", create_user, name="admin-create-user"),
-    path("admin/users/<int:pk>/update/", update_user, name="admin-update-user"),
+    path("users/<int:pk>/update/", update_user, name="admin-update-user"),
     path("admin/users/<int:pk>/delete/", delete_user, name="admin-delete-user"),
     path("account/delete/", delete_account, name="delete-account"),
 ]
