@@ -10,6 +10,7 @@ from .serializers import UserSerializer, UploadedImageSerializer, PredictionResu
 from .ml_model.predict import predict_disease
 from rest_framework_simplejwt.tokens import AccessToken
 from django.core.mail import send_mail
+from django.contrib.auth.hashers import check_password
 from django.contrib.auth.tokens import default_token_generator
 from rest_framework.exceptions import AuthenticationFailed
 from rest_framework.pagination import PageNumberPagination
@@ -38,8 +39,6 @@ def register(request):
         }, status=status.HTTP_201_CREATED)
     
     return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-
-
 
 
 @api_view(['POST'])
@@ -74,7 +73,6 @@ def login(request):
         }
     })   
     
-
 
 
 def validate_token_and_get_user(request):
@@ -234,8 +232,6 @@ def list_predictions(request):
     serializer = PredictionResultSerializer(paginated_predictions, many=True)
     
     return paginator.get_paginated_response(serializer.data)
-
-
 
 
 
@@ -400,7 +396,6 @@ def list_users(request):
         return Response({"error": "Only Super Admin can list users."}, status=status.HTTP_403_FORBIDDEN)
 
 
-
 @api_view(["PUT", "PATCH"])
 def update_user(request, pk):
     user, error_response = validate_token_and_get_user(request)
@@ -489,3 +484,38 @@ def delete_account(request):
         return Response({"message": "Account deleted successfully."}, status=status.HTTP_204_NO_CONTENT)
     except Exception as e:
         return Response({"error": f"Error deleting account: {str(e)}"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+    
+    
+@api_view(["POST"])
+def change_password(request):
+    """
+    Allows users to change their password by verifying the current password.
+    """
+    user, error_response = validate_token_and_get_user(request)
+    if error_response:
+        return error_response  # Return error if token is invalid
+
+    # Extract password fields from request
+    current_password = request.data.get("current_password")
+    new_password = request.data.get("new_password")
+    confirm_password = request.data.get("confirm_password")
+
+    # Validate inputs
+    if not current_password or not new_password or not confirm_password:
+        return Response({"error": "All fields are required."
+            }, status=status.HTTP_400_BAD_REQUEST)
+
+    if new_password != confirm_password:
+        return Response({
+            "error": "New password and confirm password do not match."
+            }, status=status.HTTP_400_BAD_REQUEST)
+
+    # Check if current password is correct
+    if not check_password(current_password, user.password):
+        return Response({"error": "Current password is incorrect."}, status=status.HTTP_400_BAD_REQUEST)
+
+    # Update password
+    user.set_password(new_password)
+    user.save()
+
+    return Response({"message": "Password changed successfully."}, status=status.HTTP_200_OK)

@@ -1,5 +1,5 @@
 from django.urls import path
-from .views import register,forgot_password,prediction_detail, login,delete_account, upload_image, list_predictions, delete_prediction, dashboard,get_current_user,list_users,create_user,update_user,delete_user
+from .views import register,change_password,forgot_password,prediction_detail, login,delete_account, upload_image, list_predictions, delete_prediction, dashboard,get_current_user,list_users,create_user,update_user,delete_user
 from rest_framework_simplejwt.views import TokenRefreshView
 
 urlpatterns = [
@@ -14,6 +14,7 @@ urlpatterns = [
     path('auth/user/', get_current_user, name='api-get-current-user'),
     path('token/refresh/', TokenRefreshView.as_view(), name='token-refresh'),  # JWT refresh token
     path("auth/forgot-password/", forgot_password, name="forgot-password"),
+    path("auth/change-password/", change_password, name="change-password"),
     
 ]
 
