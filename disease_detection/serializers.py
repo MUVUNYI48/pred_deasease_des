@@ -8,13 +8,18 @@ class UserSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = CustomUser
-        fields = ["username", "email", "fullname", "password", "confirm_password", "district", "phone_number", "image_profile"]  # ✅ Correct field name
+        fields = ["id", "username", "email", "fullname", "password", "confirm_password", "district", "phone_number", "image_profile"]
 
     def validate(self, data):
-        if data["password"] != data["confirm_password"]:
-            raise serializers.ValidationError("Passwords do not match")
-        if CustomUser.objects.filter(username=data["username"]).exists():
-            raise serializers.ValidationError("Username is already taken")
+        password = data.get("password")  # ✅ Safely retrieve password
+        confirm_password = data.get("confirm_password")  # ✅ Safely retrieve confirm_password
+
+        if password and confirm_password and password != confirm_password:
+            raise serializers.ValidationError({"password": "Passwords do not match."})
+
+        if "username" in data and CustomUser.objects.filter(username=data["username"]).exists():
+            raise serializers.ValidationError({"username": "Username is already taken."})
+
         return data
 
     def create(self, validated_data):
@@ -27,7 +32,7 @@ class UserSerializer(serializers.ModelSerializer):
             phone_number=validated_data["phone_number"],
             district=validated_data["district"],
             password=validated_data["password"],
-            image_profile=validated_data.get("image_profile")  # ✅ Use correct field name
+            image_profile=validated_data.get("image_profile")  #  Use correct field name
         )
 
 

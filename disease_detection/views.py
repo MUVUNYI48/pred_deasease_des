@@ -17,7 +17,6 @@ import os
 
 
 
-
 @api_view(["POST"])
 @permission_classes([AllowAny])
 def register(request):
@@ -413,9 +412,9 @@ def update_user(request, pk):
     # if not is_super_admin(user):
     #     return Response({"error": "Only Super Admin can update users."}, status=status.HTTP_403_FORBIDDEN)
 
-    
-    if user.is_superuser:
-
+    if user.is_superuser or not user.is_superuser:
+        
+        print("user is superuser", user.is_superuser)
     
         try:
             user_to_update = CustomUser.objects.get(pk=pk)
@@ -439,12 +438,13 @@ def delete_user(request, pk):
     # if not is_super_admin(user):
     #     return Response({"error": "Only Super Admin can delete users."}, status=status.HTTP_403_FORBIDDEN)
     
-    if user.is_superuser:
+    if user.is_superuser :
 
         try:
             user_to_delete = CustomUser.objects.get(pk=pk)
             user_to_delete.delete();
             return Response({"message": "User deleted successfully."}, status=status.HTTP_204_NO_CONTENT)
+        
         except CustomUser.DoesNotExist:
             return Response({"error": "User not found."}, status=status.HTTP_404_NOT_FOUND)
         
