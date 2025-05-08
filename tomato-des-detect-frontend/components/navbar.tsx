@@ -17,7 +17,9 @@ export default function Navbar() {
               <circle cx="12" cy="12" r="3" strokeWidth="2" />
             </svg>
           </div>
+          <Link href="/">
           <span className="font-bold text-xl text-white">Tomato Health Monitor</span>
+          </Link>
         </div>
 
         <div className="hidden md:flex space-x-8">

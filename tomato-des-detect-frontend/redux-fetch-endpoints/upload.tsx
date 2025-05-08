@@ -3,7 +3,9 @@ const upload_Url = "http://localhost:8000/api/upload/";
 const allPredictions_Url="http://localhost:8000/api/predictions/";
 export const uploadImage = async (formData) => {
     try {
-        
+        // Before making API calls, verify token exists
+        console.log("Token exists:", !!localStorage.getItem("token"));
+        console.log("FormData contents:", [...formData.entries()]);
         const response = await axios.post(upload_Url, formData, {
         headers: {
             "Content-Type": "multipart/form-data",

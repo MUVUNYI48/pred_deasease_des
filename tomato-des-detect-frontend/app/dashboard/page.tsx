@@ -3,7 +3,7 @@ import { useState, useEffect, useRef } from "react";
 import { PlusCircle, X } from "lucide-react";
 import { PieChart, Pie, Cell, ResponsiveContainer, Legend } from "recharts";
 import DashboardLayout from "../DashboardLoyout/page";
-import { getAllPredictions, uploadImage } from "@/redux-fetch-endpoints/upload";
+import { deletePrediction, getAllPredictions, uploadImage } from "@/redux-fetch-endpoints/upload";
 import Image from "next/image";
 import { Button } from "antd";
 import FileUpload from "@/components/file-upload";
@@ -12,14 +12,19 @@ export default function Dashboard() {
   const [diseaseCount, setDiseaseCount] = useState(0);
   const [recentAnalyses, setRecentAnalyses] = useState([]);
   // Sample data (in a real app, this would come from an API or props)
-  const [analyticData, setAnalyticData] = useState([]);
+  const [analyticData, setAnalyticData] = useState({
+    imagesAnalyzed: 0,
+    imagesGrowth: 0,
+    diseasesDetected: 0,
+    healthyPercentage: 0,
+  });
   const [diseaseDistribution, setDiseaseDistribution] = useState([]);
   const [imagePreviews, setImagePreviews] = useState<string[]>([]);
    const fileInputRef = useRef<HTMLInputElement>(null);
    const [showUploadArea, setShowUploadArea] = useState(true);
    const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
    const [isLoading, setIsLoading] = useState(false);
-
+   const [username, setUsername] = useState("");
   const formatDate = (dateString: any) => {
     const options: Intl.DateTimeFormatOptions = {
       year: "numeric",
@@ -44,8 +49,13 @@ export default function Dashboard() {
     return () => {
       imagePreviews.forEach(url => URL.revokeObjectURL(url));
     };
-  }, []);
+  }, [imagePreviews]);
 
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      setUsername(localStorage.getItem("fullname") || "");
+    }
+  }, []);
   const handleRemoveImage = (index: number) => {
     const newFiles = selectedFiles.filter((_, i) => i !== index);
     URL.revokeObjectURL(imagePreviews[index]);
@@ -86,7 +96,6 @@ export default function Dashboard() {
           formData.append('image', file);
         });
         const result = await uploadImage(formData);
-        setUploadResult(result);
         alert("Image uploaded successfully");
         console.log(result);
        
@@ -98,13 +107,35 @@ export default function Dashboard() {
         setIsLoading(false);
       }
     }
+// funcction to delete the image
 
+    const handleDelete = async (id) => {
+      if (window.confirm("Are you sure you want to delete this result?")) {
+        try {
+          console.log("ID of selected result to be deleted", id);
+          await deletePrediction(id);
+          
+          // Only update the UI after successful deletion
+          const updatedData = recentAnalyses.filter((item) => item.id !== id);
+          setRecentAnalyses(updatedData);
+          // setResultData(updatedData);
+          
+          window.alert("Result deleted successfully!");
+        } catch (error) {
+          console.error("Error deleting prediction:", error);
+          window.alert("Failed to delete result. Please try again.");
+        }
+      }
+    };
   // useEffect to sum up all images analyzed
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const predictionsData = await getAllPredictions();
-        setImageCount(predictionsData.length);
+        const response = await getAllPredictions();
+
+        const predictionsData = response.results; // Adjust based on your API response structure
+
+        setImageCount(response.count);
 
         // Count disease instances (you may need to adjust this logic based on your data structure)
         const diseasedPredictions = predictionsData.filter(
@@ -125,15 +156,15 @@ export default function Dashboard() {
         setDiseaseCount(diseasedCount);
         setRecentAnalyses(predictionsData.slice(0, 5)); // Get the last 5 analyses
         // You could also update other analytics here
-        setAnalyticData({
-          imagesAnalyzed: predictionsData.length,
-          imagesGrowth: Math.round(
-            ((predictionsData.length - healthyCount) / predictionsData.length) *
-              100
-          ),
-          diseasesDetected: diseasedCount,
-          healthyPercentage: healthyPercentage,
-        });
+
+      setAnalyticData({
+        imagesAnalyzed: predictionsData.length,
+        imagesGrowth: predictionsData.length > 0 
+          ? Math.round(((predictionsData.length - healthyCount) / predictionsData.length) * 100)
+          : 0,
+        diseasesDetected: diseasedCount,
+        healthyPercentage: healthyPercentage,
+      });
         const diseaseGroups = {};
         diseasedPredictions.forEach((prediction) => {
           const diseaseName = prediction.class_name;
@@ -171,7 +202,6 @@ export default function Dashboard() {
 
     fetchData();
   }, []);
-
   return (
     <DashboardLayout activePage="dashboard">
       <div className="p-6 max-w-7xl mx-auto">
@@ -179,8 +209,8 @@ export default function Dashboard() {
           <div className="lg:col-span-3 space-y-6">
             <div>
               <h1 className="text-2xl font-bold text-gray-800">Dashboard</h1>
-              <p className="text-sm text-gray-600">
-                Welcome back, {"{username}"}. Here&apos;s the current status of
+              <p className="text-sm text-gray-600 flex">
+                Welcome back,  <span className="font-semibold mx-2">{username}</span> . Here&apos;s the current status of
                 your tomato crops.
               </p>
             </div>
@@ -270,10 +300,10 @@ export default function Dashboard() {
                       <tr key={index} className="border-b border-gray-100">
                         <td className="py-3 px-3 text-sm">{index + 1}</td>
                         <td className="px-3 py-2">
-                          {analysis.image && (
+                          {analysis.image_url && (
                             <div className="w-16 h-16 rounded overflow-hidden">
                               <Image
-                                src={`http://localhost:8000${analysis.image}`}
+                                src={`http://localhost:8000${analysis.image_url}`}
                                 alt="Uploaded leaf"
                                 className="w-full h-full object-cover"
                                 width={20}
@@ -298,8 +328,8 @@ export default function Dashboard() {
                         </td>
                         <td>{analysis.confidence}%</td>
                         <td className="py-3 text-sm">
-                          <button className="bg-teal-500 hover:bg-teal-600 text-white text-xs px-3 py-1 rounded">
-                            View
+                          <button className="bg-red-500 hover:bg-red-600 text-white text-xs px-3 py-1 rounded" onClick={()=>handleDelete(analysis.id)}>
+                            delete
                           </button>
                         </td>
                       </tr>
@@ -368,7 +398,7 @@ export default function Dashboard() {
 
           {/* Quick Upload Section - 1/4 width on large screens */}
           <div className="lg:col-span-1">
-            <div className="bg-white p-4 rounded-lg shadow h-full">
+            <div className="bg-white p-4 rounded-lg  h-full">
               <h2 className="text-lg font-medium text-gray-700 mb-4">
                 Quick Upload
               </h2>

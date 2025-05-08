@@ -10,12 +10,22 @@ export default function DashboardLayout({children,activePage = 'dashboard',}: {c
   const [dropdown,setDropdown]=useState(false);
   const router=useRouter();
   const pathname=usePathname();
+  const [username, setUsername] = useState('');
+  const [fullName, setFullName] = useState('');
+  const [imageProfile, setImageProfile] = useState('');
 // Only redirect if we're at the root path
 useEffect(() => {
   if (pathname === '/DashboardLoyout') {
     router.push('/dashboard');
   }
 }, [pathname, router]);
+useEffect(() => {
+  if (typeof window !== 'undefined') {
+    setUsername(localStorage.getItem("username") || "");
+    setFullName(localStorage.getItem("fullname") || "");
+    setImageProfile(localStorage.getItem("image_profile") || "");
+  }
+}, []);
   const handleLogout=()=>{
     alert("Logging out ...");
     router.push('/login');
@@ -32,7 +42,9 @@ useEffect(() => {
               <circle cx="12" cy="12" r="3" strokeWidth="2" />
             </svg>
           </div>
+          <Link href="/dashboard">
           <span className="font-bold text-xl text-red-500">Tomato Health Monitor</span>
+          </Link>
         </div>
         <div className="flex items-center space-x-4">
           <input
@@ -42,62 +54,88 @@ useEffect(() => {
           />
         <Search className="w-6 h-6 text-gray-600" />
         </div>
-        <div className='relative'>
-        <div className="bg-gray-100 w-8 h-8 rounded-full flex items-center justify-center" onClick={()=>setDropdown(!dropdown)}>
-          <Image src="/passport.jpg" alt=" avatar" width={60} height={40} className=" w-full h-full border border-gray-200  rounded-full"/>
-        </div>
-        { dropdown &&(
-          <div className="absolute right-0 mt-1 w-28 rounded-md shadow-lg">
-               <button
-                onClick={handleLogout}
-                className="block w-full text-center py-1 rounded-md bg-red-400 hover:bg-red-600  text-white "
-              >
-                Logout
-              </button>
-          </div>
-        )}</div>
+        <div className='relative flex items-center'>
+    <div className="flex items-center cursor-pointer" onClick={()=>setDropdown(!dropdown)}>
+    <div className="bg-gray-100 w-8 h-8 rounded-full flex-shrink-0">
+      <Image src={`http://localhost:8000${imageProfile}`}  alt="avatar" width={60} height={40} className="w-full h-full border border-gray-200 rounded-full"/>
+    </div>
+    <span className='ml-2 text-gray-500 text-sm truncate max-w-[120px]'>{fullName}</span>
+  </div>
+  { dropdown &&( <div className="absolute right-0 top-full mt-1 w-28 rounded-md shadow-lg">
+    <button onClick={handleLogout} className="block w-full text-center py-1 rounded-md bg-red-400 hover:bg-red-600 text-white" > Logout </button>
+  </div> )}
+</div>
       </header>
 
       {/* Main Content with Sidebar */}
       <div className="flex">
         {/* Sidebar Navigation */}
-        <aside className="w-64 min-h-screen border-r border-gray-200 p-4">
-        <nav className="space-y-2 sticky top-16 max-h-[calc(100vh-4rem)] overflow-y-hidden">
-            <Link href="/dashboard" 
-              className={`flex items-center p-4 rounded-lg ${activePage === 'dashboard' ? 'bg-red-50 text-red-500' : 'text-gray-600 hover:bg-gray-100'}`}>
-              <LayoutDashboard className="w-5 h-5 mr-3" />
-              <span>Dashboard</span>
-            </Link>
-            
-            <Link href="/upload" 
-              className={`flex items-center p-4 rounded-lg ${activePage === 'upload' ? 'bg-red-50 text-red-500' : 'text-gray-600 hover:bg-gray-100'}`}>
-              <Plus className="w-5 h-5 mr-3" />
-              <span>Upload Images</span>
-            </Link>
-            <Link href="/imageprocessing" 
-              className={`flex items-center p-4 rounded-lg ${activePage === 'imageProcessing' ? 'bg-red-50 text-red-500' : 'text-gray-600 hover:bg-gray-100'}`}>
-             <Cpu className="w-5 h-5 mr-3" />
-              <span>Image Processing</span>
-            </Link>
-            <Link href="/result" 
-              className={`flex items-center p-4 rounded-lg ${activePage === 'results' ? 'bg-red-50 text-red-500' : 'text-gray-600 hover:bg-gray-100'}`}>
-              <History className="w-5 h-5 mr-3" />
-              <span>Analysis Results</span>
-            </Link>
-            
-            <Link href="/reports" 
-              className={`flex items-center p-4 rounded-lg ${activePage === 'reports' ? 'bg-red-50 text-red-500' : 'text-gray-600 hover:bg-gray-100'}`}>
-              <FileText className="w-5 h-5 mr-3" />
-              <span>Reports</span>
-            </Link>
-            
-            <Link href="/settings" 
-              className={`flex items-center p-4 rounded-lg ${activePage === 'settings' ? 'bg-red-50 text-red-500' : 'text-gray-600 hover:bg-gray-100'}`}>
-              <Settings className="w-5 h-5 mr-3" />
-              <span>Settings</span>
-            </Link>
-          </nav>
-        </aside>
+      <aside className="w-64 min-h-screen border-r border-gray-200 p-4">
+      <nav className="space-y-2 sticky top-16 max-h-[calc(100vh-4rem)] overflow-y-hidden">
+       {username === "testadmin" ? (
+      <>
+      <Link href="/dashboard" 
+      className={`flex items-center p-4 rounded-lg ${activePage === 'dashboard' ? 'bg-red-50 text-red-500' : 'text-gray-600 hover:bg-gray-100'}`}>
+      <LayoutDashboard className="w-5 h-5 mr-3" />
+      <span>Dashboard</span>
+      </Link>
+      <Link href="/users" 
+        className={`flex items-center p-4 rounded-lg ${activePage === 'users' ? 'bg-red-50 text-red-500' : 'text-gray-600 hover:bg-gray-100'}`}>
+        <Cpu className="w-5 h-5 mr-3" />
+        <span>Users</span>
+      </Link>
+         <Link href="/result" 
+          className={`flex items-center p-4 rounded-lg ${activePage === 'results' ? 'bg-red-50 text-red-500' : 'text-gray-600 hover:bg-gray-100'}`}>
+          <History className="w-5 h-5 mr-3" />
+          <span>Analysis Results</span>
+        </Link>
+        <Link href="/reports" 
+          className={`flex items-center p-4 rounded-lg ${activePage === 'reports' ? 'bg-red-50 text-red-500' : 'text-gray-600 hover:bg-gray-100'}`}>
+          <FileText className="w-5 h-5 mr-3" />
+          <span>Reports</span>
+        </Link>
+        <Link href="/settings" 
+          className={`flex items-center p-4 rounded-lg ${activePage === 'settings' ? 'bg-red-50 text-red-500' : 'text-gray-600 hover:bg-gray-100'}`}>
+          <Settings className="w-5 h-5 mr-3" />
+          <span>Settings</span>
+        </Link>
+      </>
+    ) : (
+      // Show all other menu items for other users
+      <>
+        <Link href="/dashboard" 
+          className={`flex items-center p-4 rounded-lg ${activePage === 'dashboard' ? 'bg-red-50 text-red-500' : 'text-gray-600 hover:bg-gray-100'}`}>
+          <LayoutDashboard className="w-5 h-5 mr-3" />
+          <span>Dashboard</span>
+        </Link>
+        
+        <Link href="/upload" 
+          className={`flex items-center p-4 rounded-lg ${activePage === 'upload' ? 'bg-red-50 text-red-500' : 'text-gray-600 hover:bg-gray-100'}`}>
+          <Plus className="w-5 h-5 mr-3" />
+          <span>Upload Images</span>
+        </Link>
+        
+        <Link href="/result" 
+          className={`flex items-center p-4 rounded-lg ${activePage === 'results' ? 'bg-red-50 text-red-500' : 'text-gray-600 hover:bg-gray-100'}`}>
+          <History className="w-5 h-5 mr-3" />
+          <span>Analysis Results</span>
+        </Link>
+        
+        <Link href="/reports" 
+          className={`flex items-center p-4 rounded-lg ${activePage === 'reports' ? 'bg-red-50 text-red-500' : 'text-gray-600 hover:bg-gray-100'}`}>
+          <FileText className="w-5 h-5 mr-3" />
+          <span>Reports</span>
+        </Link>
+        
+        <Link href="/settings" 
+          className={`flex items-center p-4 rounded-lg ${activePage === 'settings' ? 'bg-red-50 text-red-500' : 'text-gray-600 hover:bg-gray-100'}`}>
+          <Settings className="w-5 h-5 mr-3" />
+          <span>Settings</span>
+        </Link>
+      </>
+    )}
+  </nav>
+</aside>
 
         {/* Main Content Area */}
         <main className="flex-1 p-8">
