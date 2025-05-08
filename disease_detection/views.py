@@ -210,33 +210,31 @@ class CustomPagination(PageNumberPagination):
 @api_view(["GET"])
 def list_predictions(request):
     """
-    Returns paginated predictions filtered by user ID.
-    - Superusers can view all predictions or filter by user ID (if exists).
-    - Regular users can only view their own predictions.
+    Returns paginated predictions.
+    - Superusers get all predictions.
+    - Regular users get only their own predictions.
     """
     user, error_response = validate_token_and_get_user(request)
     if error_response:
         return error_response
 
-    user_id = request.GET.get("user_id")
-
-    if user.is_superuser and user_id:
-        # ✅ Check if the user exists before filtering predictions
-        if not CustomUser.objects.filter(id=user_id).exists():
-            return Response({"error": "User not found."}, status=status.HTTP_404_NOT_FOUND)
-        predictions = PredictionResult.objects.filter(user_id=user_id)
+    # ✅ Superuser gets ALL predictions (No filter)
+    if user.is_superuser:
+        predictions = PredictionResult.objects.all()
     else:
+        # ✅ Regular users get ONLY their own predictions
         predictions = PredictionResult.objects.filter(user=user)
 
     predictions = predictions.order_by("-created_at")
 
-    # ✅ Apply pagination
+    # ✅ Apply pagination correctly
     paginator = CustomPagination()
     paginated_predictions = paginator.paginate_queryset(predictions, request)
 
     serializer = PredictionResultSerializer(paginated_predictions, many=True)
     
     return paginator.get_paginated_response(serializer.data)
+
 
 
 
