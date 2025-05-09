@@ -41,41 +41,92 @@ def register(request):
     return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 
-@api_view(['POST'])
+# @api_view(['POST'])
+# def login(request):
+#     email = request.data.get('email')
+#     password = request.data.get('password')
+
+#     if not email or not password:
+#         return Response({
+#             'error': 'Email and password are required'},
+#             status=status.HTTP_400_BAD_REQUEST)
+
+#     # Find user by email
+#     try:
+#         user = CustomUser.objects.get(email=email)
+#         print(f"User information: {user}")
+        
+#     except CustomUser.DoesNotExist:
+#         return Response({'error': 'Invalid credentials'}, status=status.HTTP_401_UNAUTHORIZED)
+
+#     #  Manually Validate Password
+#     if not user.check_password(password):  # Directly verify password against stored hash
+#         return Response({'error': 'Invalid credentials'}, status=status.HTTP_401_UNAUTHORIZED)
+
+#     # Generate JWT tokens
+#     refresh = RefreshToken.for_user(user)
+#     return Response({
+#         'access': str(refresh.access_token),
+#         'refresh': str(refresh),
+#         'user': {
+#             'id': user.id,
+#             'username': user.username,
+#             'email': user.email,
+#             'fullname': user.fullname,
+#             'phone': user.phone_number,
+#             'profile_pic':user.image_profile
+            
+#         }
+#     })   
+    
+
+@api_view(["POST"])
 def login(request):
-    email = request.data.get('email')
-    password = request.data.get('password')
+    email = request.data.get("email")
+    password = request.data.get("password")
 
     if not email or not password:
-        return Response({
-            'error': 'Email and password are required'},
-            status=status.HTTP_400_BAD_REQUEST)
+        return Response(
+            {"error": "Email and password are required"},
+            status=status.HTTP_400_BAD_REQUEST,
+        )
 
     # Find user by email
     try:
         user = CustomUser.objects.get(email=email)
-    except CustomUser.DoesNotExist:
-        return Response({'error': 'Invalid credentials'}, status=status.HTTP_401_UNAUTHORIZED)
+        print(f"User information: {user}")
 
-    #  Manually Validate Password
+    except CustomUser.DoesNotExist:
+        return Response(
+            {"error": "Invalid credentials"}, status=status.HTTP_401_UNAUTHORIZED
+        )
+
+    # Manually Validate Password
     if not user.check_password(password):  # Directly verify password against stored hash
-        return Response({'error': 'Invalid credentials'}, status=status.HTTP_401_UNAUTHORIZED)
+        return Response(
+            {"error": "Invalid credentials"}, status=status.HTTP_401_UNAUTHORIZED
+        )
 
     # Generate JWT tokens
     refresh = RefreshToken.for_user(user)
-    return Response({
-        'access': str(refresh.access_token),
-        'refresh': str(refresh),
-        'user': {
-            'id': user.id,
-            'username': user.username,
-            'email': user.email,
-            'fullname': user.fullname,
-            'phone': user.phone_number,
-            
+
+    # ✅ Ensure image_profile is properly handled (Avoid `NoneType` error)
+    profile_pic = user.image_profile.url if user.image_profile else None
+
+    return Response(
+        {
+            "access": str(refresh.access_token),
+            "refresh": str(refresh),
+            "user": {
+                "id": user.id,
+                "username": user.username,
+                "email": user.email,
+                "fullname": user.fullname,
+                "phone": user.phone_number,
+                "profile_pic": profile_pic,  # ✅ Now safely checks if image_profile exists
+            },
         }
-    })   
-    
+    )
 
 
 def validate_token_and_get_user(request):
