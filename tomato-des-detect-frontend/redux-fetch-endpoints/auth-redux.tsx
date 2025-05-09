@@ -24,8 +24,7 @@ export const registerUser = async (registerData) => {
   try {
     const response = await axios.post(BASE_URL_REGISTER, formData);
     console.log('User registered successfully:', response.data);
-    localStorage.setItem('image_profile', response.data.user.image_profile);
-    console.log('Image Profile:', response.data.user.image_profile); 
+  
     return response.data;
   } catch (error) {
     console.error('Error registering user:', error);
@@ -55,7 +54,8 @@ export const registerUser = async (registerData) => {
     localStorage.setItem('phone', response.data.user.phone);
     localStorage.setItem('fullname', response.data.user.fullname);
     localStorage.setItem('userId', response.data.user.id);
-  
+    localStorage.setItem('image_profile', response.data.user.profile_pic);
+    console.log('Image Profile:', response.data.user.profile_pic);
 
     console.log('Fullname:', response.data.user.fullname); 
     console.log('Username:', response.data.user.username);
