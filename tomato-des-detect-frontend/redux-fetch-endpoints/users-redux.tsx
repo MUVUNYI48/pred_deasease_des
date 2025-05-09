@@ -1,10 +1,7 @@
 import axios from "axios";
 
 const GET_ALL_USERS = 'http://localhost:8000/api/admin/users/';
-// const DELETE_USER = 'http://localhost:8000/api/admin/users/{id}/delete/';
-// Update this in your constants file
-// const DELETE_USER = 'http://localhost:8000/api/admin/users/{id}/delete/';
-const UPDATE_USER = 'http://localhost:8000/api/admin/users/{id}/update/';
+const UPDATE_USER = 'http://localhost:8000/api/users/{id}/update/';
 const GET_PRED_USER = 'http://localhost:8000/api/predictions/user/{id}/';
 
 export const get_all_users = async () => {
@@ -23,9 +20,9 @@ export const get_all_users = async () => {
     }
 }
 
-export const update_user = async (userId, userData) => {
+export const update_user = async (id, userData) => {
     try {
-        const response = await axios.put(UPDATE_USER.replace('{id}', userId.toString()), userData, {
+        const response = await axios.put(UPDATE_USER.replace('{id}', id.toString()), userData, {
             headers: {
                 'Content-Type': 'application/json',
                 Authorization: `Bearer ${localStorage.getItem('token')}`

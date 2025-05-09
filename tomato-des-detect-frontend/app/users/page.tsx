@@ -2,6 +2,7 @@
 
 import React, { useEffect, useState } from "react";
 import DashboardLayout from "../DashboardLoyout/page";
+import { LoadingOutlined, SaveOutlined } from "@ant-design/icons";
 import {
   Search,
   Edit,
@@ -12,6 +13,7 @@ import {
   ChevronDown,
   ChevronUp,
   AlertCircle,
+  Loader,
 } from "lucide-react";
 import {
   get_all_users,
@@ -29,6 +31,7 @@ export default function UsersPage() {
   const [currentPage, setCurrentPage] = useState(1);
   const [usersPerPage] = useState(5);
   const [loading, setLoading] = useState(true);
+  const [loadingUpdate, setLoadingUpdate] = useState(false);
   const [users, setUsers] = useState([]);
   const [showUpdateUser, setShowUpdateUser] = useState(false);
   const [currentUser, setCurrentUser] = useState(null);
@@ -155,9 +158,9 @@ export default function UsersPage() {
 
   // Function to handleUpdate
   const handleSubmit = async (values) => {
+    setLoadingUpdate(true);
     try {
-      // Pass userId separately as the first parameter and updated data as second parameter
-      const result = await update_user(currentUser.username, {
+      const result = await update_user(currentUser.id, {
         fullname: values.fullName,
         email: values.email,
         phone_number: values.phoneNumber,
@@ -186,6 +189,7 @@ export default function UsersPage() {
       console.error("Error updating user:", error);
       alert("Error updating user: " + error.message);
     }
+    setLoadingUpdate(false);
   };
 
   // Handle user deletion
@@ -583,8 +587,10 @@ export default function UsersPage() {
               htmlType="submit"
               block
               className="bg-red-500 hover:bg-red-600 w-full"
+              loading={loadingUpdate}
+              disabled={loadingUpdate}
             >
-              Update User
+              {loadingUpdate ? "Updating..." : "Update User"}
             </Button>
           </Form.Item>
         </Form>

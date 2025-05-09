@@ -7,29 +7,35 @@ const BASE_URL_LOGIN = 'http://localhost:8000/api/login/';
 export const registerUser = async (registerData) => {
   console.log("Register Data:", registerData);
   const formData = new FormData();
+  
+  // Add all text fields
   formData.append('fullname', registerData.fullname);
   formData.append('username', registerData.username);
   formData.append('email', registerData.email);
   formData.append('district', registerData.district);
   formData.append('phone_number', registerData.phone_number);
-  formData.append('image_profile', registerData.image_profile);
   formData.append('password', registerData.password);
   formData.append('confirm_password', registerData.confirm_password);
+  
+  if (registerData.image_profile) {
+    formData.append('image_profile', registerData.image_profile, registerData.image_profile.name);
+  }
 
   try {
     const response = await axios.post(BASE_URL_REGISTER, formData);
     console.log('User registered successfully:', response.data);
-
-    localStorage.setItem('image_profile', response.data.user.image_profile); // <-- Add this line
-    console.log('Image Profile:', response.data.user.image_profile); // Optional debug log
-// Optional debug log
-  
+    localStorage.setItem('image_profile', response.data.user.image_profile);
+    console.log('Image Profile:', response.data.user.image_profile); 
     return response.data;
   } catch (error) {
     console.error('Error registering user:', error);
-    // throw error;
+    if (error.response) {
+      console.error('Response data:', error.response.data);
+      console.error('Response status:', error.response.status);
+      console.error('Response headers:', error.response.headers);
+    }
+    throw error;
   }
-  
 }
 
 
@@ -49,10 +55,14 @@ export const registerUser = async (registerData) => {
     localStorage.setItem('phone', response.data.user.phone);
     localStorage.setItem('fullname', response.data.user.fullname);
     localStorage.setItem('userId', response.data.user.id);
+  
 
     console.log('Fullname:', response.data.user.fullname); 
     console.log('Username:', response.data.user.username);
     console.log('Email:', response.data.user.email);
+    console.log('Phone:', response.data.user.phone);
+    console.log('User ID:', response.data.user.id);
+
     console.log('Token:', response.data.access);
     return response.data;
 

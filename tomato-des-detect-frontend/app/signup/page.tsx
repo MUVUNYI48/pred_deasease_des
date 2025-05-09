@@ -47,29 +47,52 @@ export default function SignupPage() {
       alert("Passwords do not match!");
       return;
     }
+    if (!selectedFile) {
+      alert("Please select a profile picture!");
+      return;
+    }
     setIsLoading(true);
-
+  
+    // Add debugging to see what kind of file object we're dealing with
+    console.log("Selected file type:", Object.prototype.toString.call(selectedFile));
+    console.log("Selected file properties:", Object.keys(selectedFile));
+    console.log("Selected file name:", selectedFile.name);
+    console.log("Selected file size:", selectedFile.size);
+  
     const registerData = {
       fullname: data.fullname,
       username: data.username,
       email: data.email,
       district: data.district,
       phone_number: data.phone_number,
-      image_profile: selectedFile,
+      image_profile: selectedFile, // This should be a File object from the input
       password: data.password,
       confirm_password: data.confirm_password,
     };
-
+  
     try {
+      // Added debugging before API call
+      console.log("About to call registerUser with data:", {
+        ...registerData,
+        image_profile: registerData.image_profile ? `File: ${registerData.image_profile.name}` : 'No file',
+        password: '***', // Don't log actual password
+        confirm_password: '***'
+      });
+      
       const result = await registerUser(registerData);
       console.log("Signup response:", result);
-      alert("signing up successfull");
+      alert("signing up successful");
       router.push("/login");
     } catch (error) {
       setIsLoading(false);
       if (axios.isAxiosError(error)) {
         console.error("Axios error details:", error.toJSON());
-        alert("signing up failed: " + error.message);
+        // Show more useful error information if available
+        if (error.response && error.response.data) {
+          alert("Signup failed: " + JSON.stringify(error.response.data));
+        } else {
+          alert("Signup failed: " + error.message);
+        }
       } else {
         console.error("Non-Axios error:", error);
         alert("Unknown error during signup.");
